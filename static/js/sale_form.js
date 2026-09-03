@@ -1,11 +1,16 @@
-// "Yangi sotuv" formasi: mijoz/mahsulot qidiruvli tanlagichi (picker.js),
-// qator o'chirish (bitta bosishda), va real-time qator/umumiy summa
-// hisoblagichi.
+// "Yangi sotuv" formasi: katalog (kartochkalar) + savatcha (POS uslubi).
+// Mijoz qidiruvli tanlagich orqali (picker.js), mahsulotlar kartochka
+// ko'rinishida tanlanadi va miqdor kiritilib savatchaga qo'shiladi.
+// Yakuniy submitda savatcha formset yashirin inputlariga sinxronlanadi.
 (function () {
     'use strict';
 
     const formatMoney = window.formatMoney;
     const attachSearchPicker = window.attachSearchPicker;
+
+    function trimNum(n) {
+        return (Math.round(n * 1000) / 1000).toString();
+    }
 
     function initCustomerPicker(data) {
         const root = document.querySelector('[data-picker="customer"]');
@@ -20,104 +25,204 @@
         });
     }
 
-    function initProductRow(row, data) {
-        const root = row.querySelector('[data-picker="product"]');
-        const select = row.querySelector('[data-role="product-select"]');
-        const qtyInput = row.querySelector('[data-role="qty"]');
-        const priceInput = row.querySelector('[data-role="price"]');
-        const discountInput = row.querySelector('[data-role="discount"]');
-        const lineTotalEl = row.querySelector('.line-total');
-        const removeBtn = row.querySelector('.row-remove-btn');
-        const thumbBox = root ? root.querySelector('.picker-selected') : null;
-
-        function updateThumb(product) {
-            if (!thumbBox) return;
-            if (product && product.image) {
-                thumbBox.innerHTML = `<img src="${product.image}" class="product-thumb" alt=""><span class="small text-muted">${product.unit}</span>`;
-            } else if (product) {
-                thumbBox.innerHTML = `<div class="product-thumb-placeholder">🥩</div><span class="small text-muted">${product.unit}</span>`;
-            } else {
-                thumbBox.innerHTML = '';
-            }
-        }
-
-        function recalcRow() {
-            const qty = parseFloat(qtyInput.value) || 0;
-            const price = parseFloat(priceInput.value) || 0;
-            const discount = parseFloat(discountInput.value) || 0;
-            const total = Math.max(0, qty * price - discount);
-            if (lineTotalEl) lineTotalEl.textContent = formatMoney(total);
-            row.dataset.lineTotal = String(total);
-            recalcGrandTotal();
-        }
-
-        if (root && select) {
-            attachSearchPicker({
-                root, select, items: data.products,
-                placeholder: 'Mahsulot qidiring...',
-                matchText: (p) => p.name,
-                renderItem: (p) => `
-                    ${p.image ? `<img src="${p.image}" class="product-thumb">` : '<div class="product-thumb-placeholder">🥩</div>'}
-                    <div><div class="fw-medium">${p.name}</div><div class="small text-muted">${formatMoney(parseFloat(p.price))} so'm/${p.unit}</div></div>
-                `,
-                onSelect: (product, isInitial) => {
-                    updateThumb(product);
-                    if (!isInitial && !priceInput.value) {
-                        priceInput.value = product.price;
-                    }
-                    recalcRow();
-                },
-            });
-        }
-
-        [qtyInput, priceInput, discountInput].forEach((el) => {
-            if (el) el.addEventListener('input', recalcRow);
-        });
-
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                row.remove();
-                recalcGrandTotal();
-            });
-        }
-
-        recalcRow();
-    }
-
-    function recalcGrandTotal() {
-        const box = document.getElementById('grand-total');
-        if (!box) return;
-        let sum = 0;
-        document.querySelectorAll('#item-rows .formset-row').forEach((row) => {
-            sum += parseFloat(row.dataset.lineTotal || '0');
-        });
-        box.textContent = formatMoney(sum) + " so'm";
-    }
-
-    function initAddRow(data) {
-        const addBtn = document.getElementById('add-item-rows');
-        const template = document.getElementById('item-empty-form');
-        const tbody = document.getElementById('item-rows');
-        const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
-        if (!addBtn || !template || !tbody || !totalFormsInput) return;
-
-        addBtn.addEventListener('click', () => {
-            const idx = parseInt(totalFormsInput.value, 10);
-            const html = template.innerHTML.replace(/__prefix__/g, String(idx));
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = html;
-            const newRow = wrapper.querySelector('tr.formset-row');
-            if (!newRow) return;
-            tbody.appendChild(newRow);
-            totalFormsInput.value = String(idx + 1);
-            initProductRow(newRow, data);
-        });
-    }
-
     window.SaleFormInit = function (data) {
         initCustomerPicker(data);
-        document.querySelectorAll('#item-rows .formset-row').forEach((row) => initProductRow(row, data));
-        initAddRow(data);
-        recalcGrandTotal();
+
+        const products = data.products || [];
+        let cart = (data.initialCart || []).map((c) => ({
+            productId: c.id,
+            name: c.name,
+            unit: c.unit,
+            image: c.image,
+            quantity: parseFloat(c.quantity) || 0,
+            price: parseFloat(c.price) || 0,
+            discount: parseFloat(c.discount) || 0,
+        }));
+
+        const catalogEl = document.getElementById('product-catalog');
+        const catalogEmptyEl = document.getElementById('catalog-empty');
+        const searchInput = document.getElementById('catalog-search');
+        const cartLinesEl = document.getElementById('cart-lines');
+        const cartEmptyEl = document.getElementById('cart-empty');
+        const hiddenItemsEl = document.getElementById('hidden-items');
+        const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+        const cartBarCount = document.getElementById('cart-bar-count');
+        const cartBarTotal = document.getElementById('cart-bar-total');
+        const grandTotalEl = document.getElementById('grand-total');
+        if (!catalogEl || !totalFormsInput) return;
+
+        function cartQtyFor(productId) {
+            return cart.filter((c) => c.productId === productId).reduce((s, c) => s + c.quantity, 0);
+        }
+
+        function remainingStock(product) {
+            return (parseFloat(product.stock) || 0) - cartQtyFor(product.id);
+        }
+
+        function addToCart(product, qty) {
+            const existing = cart.find((c) => c.productId === product.id);
+            if (existing) {
+                existing.quantity = Math.round((existing.quantity + qty) * 1000) / 1000;
+            } else {
+                cart.push({
+                    productId: product.id,
+                    name: product.name,
+                    unit: product.unit,
+                    image: product.image,
+                    quantity: qty,
+                    price: parseFloat(product.price) || 0,
+                    discount: 0,
+                });
+            }
+            renderAll();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            renderAll();
+        }
+
+        function renderCatalog() {
+            const q = (searchInput.value || '').trim().toLowerCase();
+            const filtered = q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
+            catalogEl.innerHTML = '';
+            catalogEmptyEl.classList.toggle('d-none', filtered.length > 0);
+            filtered.forEach((p) => {
+                const remaining = remainingStock(p);
+                const stockText = remaining <= 0 ? "Omborda yo'q" : `${trimNum(remaining)} ${p.unit} mavjud`;
+                const stockClass = remaining <= 0 ? 'text-danger' : 'text-muted';
+                const inCartQty = cartQtyFor(p.id);
+                const img = p.image
+                    ? `<img src="${p.image}" class="product-card-img" alt="">`
+                    : '<div class="product-card-img-placeholder">🥩</div>';
+                const wrap = document.createElement('div');
+                wrap.className = 'col-6 col-md-4 col-lg-3';
+                wrap.innerHTML = `
+                    <div class="card product-card h-100${inCartQty > 0 ? ' in-cart' : ''}">
+                        ${img}
+                        <div class="card-body p-2">
+                            <div class="product-card-name">${p.name}</div>
+                            <div class="product-card-price">${formatMoney(parseFloat(p.price))} so'm/${p.unit}</div>
+                            <div class="product-card-stock ${stockClass}">${stockText}</div>
+                            ${inCartQty > 0 ? `<div class="product-card-in-cart">Savatda: ${trimNum(inCartQty)} ${p.unit}</div>` : ''}
+                            <div class="d-flex gap-1 mt-2">
+                                <input type="number" class="form-control form-control-sm catalog-qty" inputmode="decimal" step="0.001" min="0" placeholder="kg">
+                                <button type="button" class="btn btn-sm btn-primary catalog-add">+</button>
+                            </div>
+                        </div>
+                    </div>`;
+                const qtyInput = wrap.querySelector('.catalog-qty');
+                const addBtn = wrap.querySelector('.catalog-add');
+                function doAdd() {
+                    const qty = parseFloat(qtyInput.value);
+                    if (!qty || qty <= 0) {
+                        qtyInput.focus();
+                        return;
+                    }
+                    addToCart(p, qty);
+                }
+                addBtn.addEventListener('click', doAdd);
+                qtyInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+                });
+                catalogEl.appendChild(wrap);
+            });
+        }
+
+        function updateGrandTotal() {
+            let sum = 0;
+            cart.forEach((it) => {
+                sum += Math.max(0, it.quantity * it.price - it.discount);
+            });
+            grandTotalEl.textContent = formatMoney(sum) + " so'm";
+            cartBarTotal.textContent = formatMoney(sum);
+            cartBarCount.textContent = `${cart.length} mahsulot`;
+        }
+
+        function renderCart() {
+            cartLinesEl.innerHTML = '';
+            cartEmptyEl.classList.toggle('d-none', cart.length > 0);
+            cart.forEach((item, index) => {
+                const lineTotal = Math.max(0, item.quantity * item.price - item.discount);
+                const img = item.image
+                    ? `<img src="${item.image}" class="product-thumb" alt="">`
+                    : '<div class="product-thumb-placeholder">🥩</div>';
+                const row = document.createElement('div');
+                row.className = 'cart-line';
+                row.innerHTML = `
+                    ${img}
+                    <div class="flex-grow-1">
+                        <div class="fw-medium small">${item.name}</div>
+                        <div class="d-flex gap-1 align-items-center mt-1">
+                            <input type="number" class="form-control form-control-sm cart-qty" style="width:75px" step="0.001" min="0.001" value="${item.quantity}">
+                            <span class="small text-muted">${item.unit} ×</span>
+                            <input type="number" class="form-control form-control-sm cart-price" style="width:95px" step="0.01" min="0" value="${item.price}">
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="line-total small">${formatMoney(lineTotal)}</div>
+                        <button type="button" class="row-remove-btn" title="O'chirish">✕</button>
+                    </div>`;
+                const qtyEl = row.querySelector('.cart-qty');
+                const priceEl = row.querySelector('.cart-price');
+                function liveUpdate() {
+                    // Faqat shu qatorning summasini yangilaydi — butun ro'yxatni
+                    // qayta chizmaydi, aks holda inputdagi fokus (va telefonda
+                    // teriladigan raqam) har harfda uzilib qolardi.
+                    item.quantity = parseFloat(qtyEl.value) || 0;
+                    item.price = parseFloat(priceEl.value) || 0;
+                    const newTotal = Math.max(0, item.quantity * item.price - item.discount);
+                    row.querySelector('.line-total').textContent = formatMoney(newTotal);
+                    updateGrandTotal();
+                    syncHiddenFormset();
+                }
+                qtyEl.addEventListener('input', liveUpdate);
+                priceEl.addEventListener('input', liveUpdate);
+                // Fokusdan chiqqanda: bo'sh/0 miqdorli qatorlarni tozalash va
+                // katalogdagi ombor qoldig'i ko'rsatkichini yangilash uchun
+                // to'liq qayta chizish.
+                qtyEl.addEventListener('change', renderAll);
+                priceEl.addEventListener('change', renderAll);
+                row.querySelector('.row-remove-btn').addEventListener('click', () => removeFromCart(index));
+                cartLinesEl.appendChild(row);
+            });
+            updateGrandTotal();
+        }
+
+        function syncHiddenFormset() {
+            hiddenItemsEl.innerHTML = '';
+            totalFormsInput.value = String(cart.length);
+            cart.forEach((item, i) => {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = `
+                    <input type="hidden" name="items-${i}-product" value="${item.productId}">
+                    <input type="hidden" name="items-${i}-quantity" value="${item.quantity}">
+                    <input type="hidden" name="items-${i}-price" value="${item.price}">
+                    <input type="hidden" name="items-${i}-discount" value="${item.discount || 0}">`;
+                hiddenItemsEl.appendChild(wrap);
+            });
+        }
+
+        function renderAll() {
+            cart = cart.filter((c) => c.quantity > 0);
+            renderCart();
+            syncHiddenFormset();
+            renderCatalog();
+        }
+
+        searchInput.addEventListener('input', renderCatalog);
+
+        document.getElementById('sale-form').addEventListener('submit', (e) => {
+            if (cart.length === 0) {
+                e.preventDefault();
+                alert("Kamida bitta mahsulot tanlang.");
+                const offcanvasEl = document.getElementById('cartOffcanvas');
+                if (window.bootstrap && offcanvasEl) {
+                    window.bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl).show();
+                }
+            }
+        });
+
+        renderAll();
     };
 })();

@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.customers.models import Customer
+from apps.inventory.services import inventory_service
 from apps.payments.services import payment_service
 from apps.products.models import Product
 from apps.sales.forms import SaleForm, SaleItemFormSet
@@ -18,6 +19,7 @@ from apps.sales.services import sale_service
 
 def _products_json():
     products = Product.objects.filter(active=True).order_by('name')
+    stock_map = inventory_service.get_all_stock()
     return json.dumps([
         {
             'id': p.id,
@@ -25,6 +27,7 @@ def _products_json():
             'price': str(p.sale_price),
             'unit': p.unit,
             'image': p.image.url if p.image else None,
+            'stock': str(stock_map.get(p.id, 0)),
         }
         for p in products
     ])
@@ -36,6 +39,43 @@ def _customers_json():
         {'id': c.id, 'name': c.name, 'phone': c.phone}
         for c in customers
     ])
+
+
+def _cart_json_from_formset(formset):
+    """Validatsiya xatosidan keyin formani qayta ko'rsatishda savatchani
+    (katalog UI holatini) tiklash uchun — bog'langan formset qatorlaridan
+    mahsulot/miqdor/narx/chegirmani o'qib, JS kutgan shaklga o'giradi."""
+    rows = []
+    for f in formset.forms:
+        product_id = f['product'].value()
+        quantity = f['quantity'].value()
+        if not product_id or not quantity:
+            continue
+        rows.append({
+            'product_id': product_id,
+            'quantity': quantity,
+            'price': f['price'].value() or '0',
+            'discount': f['discount'].value() or '0',
+        })
+    if not rows:
+        return '[]'
+
+    products = Product.objects.in_bulk([r['product_id'] for r in rows])
+    cart = []
+    for r in rows:
+        product = products.get(int(r['product_id']))
+        if not product:
+            continue
+        cart.append({
+            'id': product.id,
+            'name': product.name,
+            'unit': product.unit,
+            'image': product.image.url if product.image else None,
+            'quantity': r['quantity'],
+            'price': r['price'],
+            'discount': r['discount'],
+        })
+    return json.dumps(cart)
 
 
 def _generate_sale_number():
@@ -109,6 +149,7 @@ def sale_create(request):
         'formset': formset,
         'products_json': _products_json(),
         'customers_json': _customers_json(),
+        'initial_cart_json': _cart_json_from_formset(formset) if request.method == 'POST' else '[]',
     })
 
 
