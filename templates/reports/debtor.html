@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Debitor hisoboti{% endblock %}
+{% block content %}
+<h4 class="mb-3">Debitor hisoboti (mijozlar qarzi)</h4>
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Mijoz</th><th>Telefon</th><th class="text-end">Jami qarz</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'customers:detail' row.customer.pk %}">{{ row.customer.name }}</a></td>
+                    <td>{{ row.customer.phone }}</td>
+                    <td class="text-end text-danger fw-bold">{{ row.debt|floatformat:0|intcomma }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-4">Qarzdorlik yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

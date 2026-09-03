@@ -1,0 +1,5 @@
+{% if product.image %}
+    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-thumb{% if size == 'lg' %}-lg{% endif %}">
+{% else %}
+    <div class="product-thumb-placeholder{% if size == 'lg' %}-lg{% endif %}">🥩</div>
+{% endif %}

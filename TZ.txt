@@ -1,0 +1,1494 @@
+# TEXNIK TOPSHIRIQ (TZ)
+
+# Qassobxona uchun Go‘sht Savdosi, Ombor va Qarzdorlik Boshqaruv Tizimi
+
+## 1. Loyiha maqsadi
+
+O‘zbekiston sharoitida o‘rtacha qassobchilik biznesi uchun boshqaruv dasturi ishlab chiqilsin.
+
+Biznes modeli:
+
+Tadbirkor tashqaridan butun hayvonni yoki katta hajmdagi go‘shtni sotib oladi → uni bo‘laklarga ajratadi → hosil bo‘lgan mahsulotlarni kilogramm hisobida sotadi.
+
+Dastur quyidagi jarayonlarni boshqarishi kerak:
+
+* Butun hayvon/go‘shtni xarid qilish
+* Xaridni omborga kirim qilish
+* Hayvonni bo‘laklarga ajratish
+* Bo‘laklangan mahsulotlarni omborga kiritish
+* Ombor qoldig‘ini ko‘rish
+* Mahsulotlarni sotish
+* Mijozlarning debitor qarzlarini ko‘rish
+* Yetkazib beruvchilarning kreditor qarzlarini ko‘rish
+* Mijozlardan to‘lov qabul qilish
+* Yetkazib beruvchilarga to‘lov qilish
+* Xarajatlarni hisobga olish
+* Tannarxni hisoblash
+* Foydani hisoblash
+* Kunlik/oylik hisobotlar
+* Dashboard orqali biznes holatini ko‘rish
+
+---
+
+# 2. Texnologiyalar
+
+Backend:
+
+* Python 3.12+
+* Django 5+
+* Django ORM
+
+Database:
+
+**SQLite**
+
+Muhim:
+
+Database uchun PostgreSQL, MySQL yoki boshqa tashqi database ishlatilmasin.
+
+Django loyihasi yaratilganda Django tomonidan avtomatik yaratiladigan:
+
+```text
+db.sqlite3
+```
+
+ishlatilsin.
+
+Database konfiguratsiyasi imkon qadar Django'ning standart konfiguratsiyasi asosida qolsin.
+
+Frontend:
+
+* Django Templates
+* HTML5
+* CSS3
+* JavaScript
+* Bootstrap 5
+
+Admin:
+
+* Django Admin
+
+Qo‘shimcha package'lar faqat zarur bo‘lsa ishlatilsin.
+
+Keraksiz dependency qo‘shilmasin.
+
+---
+
+# 3. Loyiha falsafasi
+
+Bu loyiha kichik/o‘rta qassobxona uchun bo‘ladi.
+
+Shuning uchun arxitektura:
+
+* oddiy
+* tushunarli
+* maintainable
+* kengaytirish mumkin bo‘lgan
+* ortiqcha murakkabliksiz
+
+bo‘lishi kerak.
+
+MVP uchun microservice yoki haddan tashqari murakkab architecture ishlatilmasin.
+
+Oddiy Django project + Django apps yetarli.
+
+---
+
+# 4. Django project strukturasi
+
+Quyidagi strukturadan foydalan:
+
+```text
+butcher_management/
+│
+├── manage.py
+├── db.sqlite3
+│
+├── config/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── apps/
+│   ├── accounts/
+│   ├── products/
+│   ├── suppliers/
+│   ├── customers/
+│   ├── purchases/
+│   ├── butchering/
+│   ├── inventory/
+│   ├── sales/
+│   ├── payments/
+│   ├── expenses/
+│   ├── reports/
+│   └── dashboard/
+│
+├── templates/
+├── static/
+├── media/
+│
+├── requirements.txt
+├── .gitignore
+└── README.md
+```
+
+Agar AI yanada oddiyroq va kichikroq structure tavsiya qilsa, keraksiz app'larni birlashtirish mumkin.
+
+---
+
+# 5. Database — SQLite
+
+Database sifatida faqat:
+
+```text
+SQLite
+```
+
+ishlatilsin.
+
+Django default database:
+
+```python
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+```
+
+ishlatilsin.
+
+Database schema Django migrations orqali yaratiladi:
+
+```text
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Database uchun qo‘lda SQL yozish shart emas.
+
+Django ORM asosiy database abstraction bo‘lsin.
+
+---
+
+# 6. Foydalanuvchilar
+
+Django'ning standart authentication tizimidan foydalan.
+
+Custom User Model faqat haqiqiy zarurat bo‘lsa yaratiladi.
+
+Boshlang‘ich versiyada:
+
+* Admin
+* Manager
+* Kassir
+* Omborchi
+
+rollari bo‘lsin.
+
+Django Groups va Permissions ishlatilsin.
+
+Admin barcha huquqlarga ega.
+
+---
+
+# 7. Products — Mahsulotlar
+
+Mahsulotlar:
+
+* Lahm go‘sht
+* Son
+* Kurak
+* Qovurg‘a
+* Bo‘yin
+* Qiyma
+* Yog‘
+* Suyak
+* Chiqit
+
+kabi bo‘lishi mumkin.
+
+Model:
+
+```text
+Product
+```
+
+Maydonlar:
+
+```text
+name
+code
+category
+unit
+sale_price
+active
+description
+created_at
+updated_at
+```
+
+Asosiy unit:
+
+```text
+kg
+```
+
+Weight uchun DecimalField ishlatilsin.
+
+Masalan:
+
+```python
+quantity = models.DecimalField(
+    max_digits=10,
+    decimal_places=3
+)
+```
+
+Float ishlatilmasin.
+
+---
+
+# 8. Supplier — Yetkazib beruvchi
+
+Model:
+
+```text
+Supplier
+```
+
+Maydonlar:
+
+```text
+name
+phone
+address
+notes
+active
+created_at
+updated_at
+```
+
+Supplier detail sahifasida:
+
+```text
+Jami xarid
+Jami to‘lov
+Qarz
+```
+
+ko‘rsatilishi kerak.
+
+---
+
+# 9. Customer — Mijoz
+
+Model:
+
+```text
+Customer
+```
+
+Maydonlar:
+
+```text
+name
+phone
+address
+notes
+credit_limit
+active
+created_at
+updated_at
+```
+
+Customer detail sahifasida:
+
+```text
+Jami xarid
+Jami to‘lov
+Qarz
+```
+
+ko‘rsatilishi kerak.
+
+Transaction history:
+
+```text
+Sana
+Operatsiya
+Summa
+To‘lov
+Qarz
+```
+
+ko‘rsatilishi kerak.
+
+---
+
+# 10. Purchase — Xarid
+
+Tadbirkor butun hayvonni sotib oladi.
+
+Masalan:
+
+```text
+Mol
+420 kg
+78 000 so‘m/kg
+32 760 000 so‘m
+```
+
+Model:
+
+```text
+Purchase
+```
+
+Maydonlar:
+
+```text
+supplier
+purchase_number
+date
+animal_type
+gross_weight
+net_weight
+price_per_kg
+total_amount
+paid_amount
+debt_amount
+notes
+status
+created_by
+created_at
+updated_at
+```
+
+Hisob:
+
+```text
+total_amount =
+net_weight × price_per_kg
+```
+
+Supplier qarzi:
+
+```text
+debt_amount =
+total_amount - paid_amount
+```
+
+---
+
+# 11. Purchase qo‘shimcha xarajatlari
+
+Xaridga quyidagi xarajatlarni qo‘shish mumkin:
+
+* Transport
+* Yuklash
+* Tushirish
+* So‘yish
+* Boshqa
+
+Masalan:
+
+```text
+Mol:
+420 kg × 78 000 = 32 760 000
+
+Transport = 300 000
+
+Umumiy xarajat = 33 060 000
+```
+
+Bu xarajatlar keyinchalik mahsulot tannarxini hisoblashda ishlatilishi mumkin.
+
+---
+
+# 12. Butchering — Hayvonni bo‘laklash
+
+Bu tizimning asosiy qismi.
+
+Modellar:
+
+```text
+Butchering
+ButcheringOutput
+```
+
+Masalan:
+
+```text
+Kirim:
+420 kg
+```
+
+Bo‘laklash:
+
+```text
+Lahm        150 kg
+Qovurg‘a     45 kg
+Son          65 kg
+Kurak        50 kg
+Bo‘yin       25 kg
+Qiyma        30 kg
+Suyak        35 kg
+Yog‘         15 kg
+Chiqit        5 kg
+```
+
+Tizim avtomatik hisoblasin:
+
+```text
+Input weight
+Output weight
+Difference
+Yield %
+```
+
+Formula:
+
+```text
+output_total =
+SUM(all outputs)
+
+difference =
+input_weight - output_total
+
+yield_percentage =
+(output_total / input_weight) × 100
+```
+
+Output inputdan katta bo‘lsa, operatsiya saqlanmasin.
+
+---
+
+# 13. Butchering tasdiqlanganda
+
+Butchering tasdiqlangandan keyin:
+
+* input mahsulot ombordan chiqadi
+* output mahsulotlar omborga kiradi
+
+avtomatik amalga oshsin.
+
+Masalan:
+
+```text
+420 kg whole beef
+        ↓
+     BUTCHERING
+        ↓
+150 kg Lahm
+45 kg Qovurg‘a
+65 kg Son
+...
+```
+
+---
+
+# 14. Inventory — Ombor
+
+Ombor uchun:
+
+```text
+StockMovement
+```
+
+modelidan foydalan.
+
+Har bir mahsulotning ombor harakati saqlansin.
+
+Movement types:
+
+```text
+PURCHASE
+BUTCHERING_IN
+BUTCHERING_OUT
+SALE
+RETURN
+WASTE
+ADJUSTMENT
+```
+
+Harakat:
+
+```text
+product
+quantity
+movement_type
+unit_cost
+reference
+date
+created_by
+```
+
+Ombor qoldig‘i transactionlar asosida hisoblanadi.
+
+Formula:
+
+```text
+Stock =
+Total IN - Total OUT
+```
+
+---
+
+# 15. Omborda manfiy qoldiq
+
+Mahsulot mavjud bo‘lmasa sotishga ruxsat berilmasin.
+
+Masalan:
+
+```text
+Lahm qoldig‘i: 3 kg
+```
+
+Mijoz:
+
+```text
+5 kg
+```
+
+so‘rasa:
+
+```text
+Omborda yetarli mahsulot mavjud emas.
+Mavjud qoldiq: 3 kg
+```
+
+xatosi chiqsin.
+
+---
+
+# 16. Sale — Sotuv
+
+Modellar:
+
+```text
+Sale
+SaleItem
+```
+
+Misol:
+
+```text
+Mijoz: Ali aka
+
+Lahm:
+5 kg × 95 000 = 475 000
+
+Qovurg‘a:
+3 kg × 80 000 = 240 000
+
+Jami:
+715 000
+```
+
+Sale:
+
+```text
+customer
+sale_number
+date
+total_amount
+paid_amount
+debt_amount
+status
+created_by
+created_at
+```
+
+SaleItem:
+
+```text
+sale
+product
+quantity
+price
+discount
+total
+cost_price
+profit
+```
+
+Formula:
+
+```text
+total =
+quantity × price - discount
+```
+
+---
+
+# 17. Sotuv va ombor
+
+Sale tasdiqlanganda:
+
+```text
+Sale
+↓
+Stock OUT
+```
+
+avtomatik yaratiladi.
+
+Sotuv bekor qilinsa:
+
+```text
+Sale CANCELLED
+↓
+Stock reversal
+```
+
+amalga oshsin.
+
+---
+
+# 18. Debitor qarzdorlik
+
+Customer bo‘yicha:
+
+```text
+Total Sales
+Total Payments
+Outstanding Debt
+```
+
+hisoblanadi.
+
+Masalan:
+
+```text
+Ali aka
+
+Jami xarid:      12 500 000
+To‘langan:        9 000 000
+Qarz:             3 500 000
+```
+
+Customer history:
+
+```text
+01.09
+Sotuv       +1 200 000
+
+01.09
+To‘lov        -500 000
+
+02.09
+Sotuv       +2 000 000
+```
+
+---
+
+# 19. Kreditor qarzdorlik
+
+Supplier bo‘yicha:
+
+```text
+Total Purchases
+Total Payments
+Outstanding Debt
+```
+
+ko‘rsatilishi kerak.
+
+Misol:
+
+```text
+Abdulloh fermer xo‘jaligi
+
+Jami xarid:       32 760 000
+To‘langan:        20 000 000
+Qarz:             12 760 000
+```
+
+---
+
+# 20. Payments — To‘lovlar
+
+Payment modeli:
+
+```text
+Payment
+```
+
+To‘lov turlari:
+
+```text
+CASH
+CARD
+TRANSFER
+OTHER
+```
+
+Payment quyidagilarga tegishli bo‘lishi mumkin:
+
+```text
+Customer
+Supplier
+Sale
+Purchase
+```
+
+Maydonlar:
+
+```text
+amount
+payment_type
+customer
+supplier
+sale
+purchase
+date
+notes
+created_by
+```
+
+---
+
+# 21. Kassa
+
+Dashboardda:
+
+```text
+Bugungi kirim
+Bugungi chiqim
+Naqd qoldiq
+```
+
+ko‘rsatilishi kerak.
+
+Masalan:
+
+```text
+Bugungi sotuv:          8 450 000
+Mijozlardan to‘lov:     6 200 000
+Supplierga to‘lov:      2 000 000
+Xarajatlar:               450 000
+```
+
+---
+
+# 22. Expenses — Xarajatlar
+
+Modellar:
+
+```text
+Expense
+ExpenseCategory
+```
+
+Kategoriyalar:
+
+```text
+Transport
+Ijara
+Elektr
+Suv
+Ish haqi
+Qadoqlash
+Kommunal
+Boshqa
+```
+
+Expense:
+
+```text
+category
+amount
+date
+description
+payment_type
+created_by
+```
+
+---
+
+# 23. Tannarx
+
+Tizim har bir sotuv mahsulotining tannarxini hisoblashga harakat qilsin.
+
+Boshlang‘ich versiyada:
+
+```text
+Weighted Average Cost
+```
+
+ishlatilsin.
+
+Masalan:
+
+```text
+Lahm
+
+Tannarx: 78 000
+Sotuv narxi: 95 000
+Foyda: 17 000
+```
+
+Sotuv vaqtida `cost_price` saqlab qo‘yilsin.
+
+---
+
+# 24. Foyda
+
+Yalpi foyda:
+
+```text
+Gross Profit =
+Sales Revenue - Cost of Goods Sold
+```
+
+Sof foyda:
+
+```text
+Net Profit =
+Gross Profit - Expenses
+```
+
+Dashboardda:
+
+```text
+Bugungi savdo
+Bugungi tannarx
+Bugungi yalpi foyda
+Bugungi xarajat
+Bugungi sof foyda
+```
+
+ko‘rsatilishi kerak.
+
+---
+
+# 25. Dashboard
+
+Asosiy dashboard:
+
+```text
+========================================
+          QASSOBXONA DASHBOARD
+========================================
+
+Bugungi savdo
+8 450 000 so‘m
+
+Bugungi foyda
+1 730 000 so‘m
+
+Debitor
+12 500 000 so‘m
+
+Kreditor
+7 200 000 so‘m
+
+Ombor
+684.5 kg
+
+========================================
+
+BUGUNGI SOTUVLAR
+
+Sotuvlar soni: 24
+Jami: 8 450 000 so‘m
+
+========================================
+
+OMBOR QOLDIG‘I
+
+Lahm        42.500 kg
+Son         23.200 kg
+Kurak       11.000 kg
+Qovurg‘a    18.000 kg
+Qiyma        7.500 kg
+
+========================================
+```
+
+Grafiklar:
+
+* Kunlik savdo
+* Oylik savdo
+* Foyda
+* Eng ko‘p sotilgan mahsulotlar
+* Debitor
+* Kreditor
+
+---
+
+# 26. Hisobotlar
+
+Quyidagi reportlar bo‘lsin:
+
+### Savdo
+
+Filter:
+
+* Sana
+* Mijoz
+* Mahsulot
+
+### Xarid
+
+Filter:
+
+* Sana
+* Supplier
+* Hayvon turi
+
+### Ombor
+
+* Kirim
+* Chiqim
+* Qoldiq
+* Mahsulot harakati
+
+### Debitor
+
+* Mijoz
+* Jami qarz
+
+### Kreditor
+
+* Supplier
+* Jami qarz
+
+### Foyda
+
+* Revenue
+* Cost
+* Gross Profit
+* Expenses
+* Net Profit
+
+Excel export keyingi bosqichda qo‘shilishi mumkin.
+
+---
+
+# 27. Django Admin
+
+Django Admin to‘liq ishlashi kerak.
+
+Admin'da:
+
+* search_fields
+* list_display
+* list_filter
+* readonly_fields
+* autocomplete_fields
+* date_hierarchy
+* ordering
+
+ishlatilsin.
+
+Inline:
+
+```text
+Purchase → Purchase Items
+Sale → Sale Items
+Butchering → Butchering Outputs
+```
+
+ko‘rinishida bo‘lsin.
+
+---
+
+# 28. Frontend
+
+Django Admin asosiy boshqaruv paneli sifatida ishlatilishi mumkin.
+
+Bundan tashqari foydalanuvchi uchun qulay frontend yaratiladi.
+
+Asosiy URL'lar:
+
+```text
+/login/
+/dashboard/
+
+/sales/
+/sales/create/
+
+/purchases/
+/purchases/create/
+
+/butchering/
+/butchering/create/
+
+/inventory/
+
+/customers/
+/customers/<id>/
+
+/suppliers/
+/suppliers/<id>/
+
+/payments/
+
+/expenses/
+
+/reports/
+```
+
+Bootstrap 5 ishlatilsin.
+
+Responsive bo‘lsin.
+
+Desktop, tablet va telefon ekranlarida ishlasin.
+
+---
+
+# 29. Sotuv oynasi
+
+Sotuvchi uchun sodda interfeys:
+
+```text
+Mijoz:
+[ Ali aka ]
+
+Mahsulot:
+[ Lahm ]
+
+Miqdor:
+[ 5.000 kg ]
+
+Narx:
+[ 95 000 ]
+
+[ + Qo‘shish ]
+
+--------------------------------
+
+Lahm       5 kg      475 000
+Qovurg‘a   3 kg      240 000
+
+Jami:                715 000
+
+To‘lov:              500 000
+Qarz:                215 000
+
+[ SOTUVNI TASDIQLASH ]
+```
+
+---
+
+# 30. Validation
+
+Quyidagi holatlar bloklansin:
+
+* Manfiy kilogramm
+* Manfiy summa
+* Ombordan mavjudidan ko‘p sotish
+* Butchering output inputdan katta bo‘lishi
+* Manfiy payment
+* Noto‘g‘ri payment
+* Cancel qilingan transactionni qayta cancel qilish
+* Inactive productni sotish
+* Inactive customerga sotuv qilish
+
+---
+
+# 31. Transaction Safety
+
+Muhim operatsiyalarda:
+
+```python
+transaction.atomic()
+```
+
+ishlatilsin.
+
+Masalan:
+
+Sale yaratish:
+
+```text
+Sale
++
+SaleItem
++
+StockMovement
++
+Payment/Debt
+```
+
+bir operatsiya sifatida bajarilsin.
+
+Agar bir qismi xato bo‘lsa, barcha o‘zgarish rollback qilinsin.
+
+SQLite ishlatilgani sababli ortiqcha murakkab locking mexanizmlari qo‘shilmasin.
+
+---
+
+# 32. Transaction tarixini saqlash
+
+Muhim ma'lumotlar hard delete qilinmasin.
+
+Sale:
+
+```text
+DRAFT
+CONFIRMED
+CANCELLED
+```
+
+Purchase:
+
+```text
+DRAFT
+CONFIRMED
+CANCELLED
+```
+
+Butchering:
+
+```text
+DRAFT
+CONFIRMED
+CANCELLED
+```
+
+bo‘lishi mumkin.
+
+Tasdiqlangan operatsiya o‘chirib yuborilmasin.
+
+Bekor qilinganda tegishli stock/financial transactionlar reverse qilinsin.
+
+---
+
+# 33. Business logic
+
+Business logicni imkon qadar view ichiga yozmaslik kerak.
+
+Quyidagiga o‘xshash service layer ishlatilsin:
+
+```text
+services/
+    sale_service.py
+    purchase_service.py
+    inventory_service.py
+    butchering_service.py
+    payment_service.py
+```
+
+Masalan:
+
+```python
+create_sale()
+confirm_sale()
+cancel_sale()
+
+create_purchase()
+confirm_purchase()
+
+create_butchering()
+confirm_butchering()
+
+create_payment()
+```
+
+---
+
+# 34. Test
+
+Kamida quyidagilar test qilinsin:
+
+### Purchase
+
+* Total calculation
+* Supplier debt
+
+### Butchering
+
+* Input/output
+* Yield
+* Invalid output
+
+### Inventory
+
+* Stock IN
+* Stock OUT
+* Negative stock
+
+### Sales
+
+* Total
+* Stock reduction
+* Customer debt
+* Profit
+
+### Payments
+
+* Customer payment
+* Supplier payment
+* Debt calculation
+
+### Finance
+
+* Revenue
+* Cost
+* Gross profit
+* Expenses
+* Net profit
+
+---
+
+# 35. Security
+
+Django'ning standart security imkoniyatlaridan foydalan:
+
+* Authentication
+* Authorization
+* CSRF protection
+* Password hashing
+* Django permissions
+* DEBUG=False productionda
+* SECRET_KEY environment orqali boshqarilishi mumkin
+
+---
+
+# 36. Kelajakdagi imkoniyatlar
+
+Arxitektura kelajakda quyidagilarni qo‘shishga imkon bersin:
+
+* Bir nechta filial
+* Bir nechta ombor
+* Barcode
+* POS
+* Printer
+* Telegram bot
+* Mobile app
+* REST API
+* Excel import/export
+* Online backup
+* QR code
+* Yetkazib berish
+* Click/Payme
+* Multi-currency
+
+Lekin hozirgi MVP'da bularni implement qilish shart emas.
+
+---
+
+# 37. REAL BUSINESS SCENARIO
+
+Tizim quyidagi jarayonni to‘liq bajara olishi kerak.
+
+## 1. Mol sotib olish
+
+```text
+Supplier:
+Abdulloh fermer
+
+Mol:
+420 kg
+
+Narx:
+78 000 so‘m/kg
+
+Jami:
+32 760 000 so‘m
+```
+
+## 2. To‘lov
+
+```text
+20 000 000 so‘m
+```
+
+Supplier qarzi:
+
+```text
+12 760 000 so‘m
+```
+
+## 3. Bo‘laklash
+
+```text
+420 kg
+
+Lahm       150 kg
+Qovurg‘a    45 kg
+Son         65 kg
+Kurak       50 kg
+Bo‘yin      25 kg
+Qiyma       30 kg
+Suyak       35 kg
+Yog‘        15 kg
+Chiqit       5 kg
+```
+
+## 4. Sotuv
+
+```text
+Customer:
+Ali aka
+```
+
+Sotib oldi:
+
+```text
+Lahm:
+5 kg × 95 000 = 475 000
+
+Qovurg‘a:
+3 kg × 80 000 = 240 000
+```
+
+Jami:
+
+```text
+715 000 so‘m
+```
+
+To‘lov:
+
+```text
+500 000 so‘m
+```
+
+Qarz:
+
+```text
+215 000 so‘m
+```
+
+## 5. Dashboard
+
+Tizim avtomatik ko‘rsatadi:
+
+```text
+Ombor qoldig‘i
+Debitor
+Kreditor
+Bugungi savdo
+Bugungi foyda
+Xarajatlar
+Sof foyda
+```
+
+---
+
+# 38. AI UCHUN ENG MUHIM KO‘RSATMA
+
+Ushbu TZ asosida loyihani professional Django developer sifatida ishlab chiq.
+
+MUHIM:
+
+1. Database sifatida faqat Django default SQLite ishlat.
+2. PostgreSQL yoki boshqa database qo‘shma.
+3. Django ORM ishlat.
+4. Float o‘rniga DecimalField ishlat.
+5. Business logicni service layerga ajrat.
+6. Inventory transaction-based bo‘lsin.
+7. Muhim operatsiyalarda `transaction.atomic()` ishlat.
+8. Tasdiqlangan transactionlarni hard delete qilma.
+9. Django Admin to‘liq ishlasin.
+10. Kod oddiy va tushunarli bo‘lsin.
+11. Keraksiz package va dependency qo‘shma.
+12. Responsive frontend tayyorla.
+13. Security va permissionsni hisobga ol.
+14. Testlar yoz.
+
+## KODNI BIR MARTADA YOZMA.
+
+Avval quyidagilarni ishlab chiq:
+
+### STEP 1
+
+To‘liq project structure.
+
+### STEP 2
+
+Barcha Django app'lar.
+
+### STEP 3
+
+Barcha database modellari.
+
+### STEP 4
+
+Modellar orasidagi relationship.
+
+Relationship diagramini ham ko‘rsat:
+
+```text
+Supplier
+   ↓
+Purchase
+   ↓
+Butchering
+   ↓
+Product
+   ↓
+Inventory
+   ↓
+Sale
+   ↓
+Customer
+```
+
+Shuningdek:
+
+```text
+Customer → Payment
+Supplier → Payment
+Sale → Payment
+Purchase → Payment
+```
+
+bog‘lanishlarini ko‘rsat.
+
+### STEP 5
+
+Models uchun migration.
+
+### STEP 6
+
+Django Admin.
+
+### STEP 7
+
+Service layer va business logic.
+
+### STEP 8
+
+Inventory.
+
+### STEP 9
+
+Purchase va Butchering.
+
+### STEP 10
+
+Sales va Payments.
+
+### STEP 11
+
+Debitor/Kreditor.
+
+### STEP 12
+
+Dashboard.
+
+### STEP 13
+
+Reports.
+
+### STEP 14
+
+Frontend.
+
+### STEP 15
+
+Tests.
+
+Har bir bosqichni tugatgandan keyin kodni tekshir va keyingi bosqichga o‘t.
+
+Mavjud funksiyalarni buzmasdan ishlashni ta'minla.
+
+Avval **STEP 1 — project structure va STEP 2 — Django app structure**ni yarat.

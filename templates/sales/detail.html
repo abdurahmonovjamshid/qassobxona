@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Sotuv {{ sale.sale_number }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Sotuv {{ sale.sale_number }} <span class="badge badge-status-{{ sale.status }}">{{ sale.get_status_display }}</span></h4>
+    <div>
+        <a href="{% url 'payments:create' %}?sale={{ sale.pk }}" class="btn btn-outline-primary">+ To'lov</a>
+        {% if sale.status == 'CONFIRMED' %}
+        <form method="post" action="{% url 'sales:cancel' sale.pk %}" class="d-inline" onsubmit="return confirm('Sotuvni bekor qilishni tasdiqlaysizmi? Ombor harakati teskari qaytariladi.');">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger">Bekor qilish</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'sales:list' %}" class="btn btn-outline-secondary">Ortga</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Mijoz</div><div class="stat-value fs-5">{{ sale.customer.name }}</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Jami</div><div class="stat-value">{{ sale.total_amount|floatformat:0|intcomma }}</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">To'langan</div><div class="stat-value text-success">{{ sale.paid_amount|floatformat:0|intcomma }}</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ sale.debt_amount|floatformat:0|intcomma }}</div>
+    </div></div></div>
+</div>
+
+<div class="card table-card mb-3">
+    <div class="card-header bg-white">Mahsulotlar</div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th></th><th>Mahsulot</th><th class="text-end">Miqdor</th><th class="text-end">Narx</th><th class="text-end">Chegirma</th><th class="text-end">Jami</th><th class="text-end">Foyda</th></tr></thead>
+            <tbody>
+            {% for item in items %}
+                <tr>
+                    <td>{% include "partials/product_thumb.html" with product=item.product %}</td>
+                    <td>{{ item.product.name }}</td>
+                    <td class="text-end">{{ item.quantity|floatformat:3 }} kg</td>
+                    <td class="text-end">{{ item.price|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ item.discount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ item.total|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ item.profit|floatformat:0|intcomma }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card table-card">
+    <div class="card-header bg-white">To'lovlar tarixi</div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Sana</th><th>Turi</th><th class="text-end">Summa</th></tr></thead>
+            <tbody>
+            {% for payment in payments %}
+                <tr><td>{{ payment.date|date:"d.m.Y" }}</td><td>{{ payment.get_payment_type_display }}</td><td class="text-end">{{ payment.amount|floatformat:0|intcomma }}</td></tr>
+            {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-3">To'lov yo'q</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Yangi xarid{% endblock %}
+{% block content %}
+<h4 class="mb-3">🐄 Yangi xarid</h4>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="card table-card mb-3">
+        <div class="card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Yetkazib beruvchi</label>
+                {{ form.supplier }}{{ form.supplier.errors }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Ombor mahsuloti (masalan: Mol butun)</label>
+                <div class="picker" data-picker="product">
+                    <input type="text" class="form-control picker-search" autocomplete="off">
+                    <div class="picker-results" style="display:none;"></div>
+                    <div class="picker-selected d-flex align-items-center gap-2 mt-1"></div>
+                    {{ form.product }}
+                </div>
+                {{ form.product.errors }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Sana</label>
+                {{ form.date }}{{ form.date.errors }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Hayvon turi</label>
+                {{ form.animal_type }}{{ form.animal_type.errors }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Brutto vazn (kg)</label>
+                {{ form.gross_weight }}{{ form.gross_weight.errors }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Netto vazn (kg)</label>
+                {{ form.net_weight }}{{ form.net_weight.errors }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Narx / kg (so'm)</label>
+                {{ form.price_per_kg }}{{ form.price_per_kg.errors }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.paid_amount.label }}</label>
+                {{ form.paid_amount }}
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Izoh</label>
+                {{ form.notes }}
+            </div>
+        </div>
+    </div>
+
+    {{ formset.management_form }}
+    <div class="card table-card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span>Qo'shimcha xarajatlar (transport, yuklash...)</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-expense-rows">+ Qo'shish</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Turi</th><th>Summa</th><th>Izoh</th><th></th></tr></thead>
+                <tbody id="expense-rows">
+                {% for exp_form in formset %}
+                    <tr class="formset-row">
+                        <td>{{ exp_form.id }}{{ exp_form.expense_type }}</td>
+                        <td>{{ exp_form.amount }}</td>
+                        <td>{{ exp_form.notes }}</td>
+                        <td class="text-center">
+                            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card table-card mb-3">
+        <div class="card-body">
+            <div class="row g-3 text-end">
+                <div class="col-md-4">
+                    <div class="stat-label">Xarid summasi (netto × narx)</div>
+                    <div class="fs-5 fw-semibold" id="purchase-amount-total">0 so'm</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-label">Qo'shimcha xarajatlar jami</div>
+                    <div class="fs-5 fw-semibold" id="expenses-total">0 so'm</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-label">Umumiy xarajat</div>
+                    <div class="grand-total-box" id="grand-total">0 so'm</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-success btn-lg">XARIDNI TASDIQLASH</button>
+    </div>
+</form>
+
+<template id="expense-empty-form">
+<table><tbody>
+    <tr class="formset-row">
+        <td>{{ formset.empty_form.id }}{{ formset.empty_form.expense_type }}</td>
+        <td>{{ formset.empty_form.amount }}</td>
+        <td>{{ formset.empty_form.notes }}</td>
+        <td class="text-center">
+            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+        </td>
+    </tr>
+</tbody></table>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/formset.js' %}"></script>
+<script src="{% static 'js/picker.js' %}"></script>
+<script src="{% static 'js/purchase_form.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        window.PurchaseFormInit({{ products_json|safe }}, '{{ formset.prefix }}');
+    });
+</script>
+{% endblock %}

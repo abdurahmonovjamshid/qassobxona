@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Yetkazib beruvchilar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Yetkazib beruvchilar</h4>
+    <a href="{% url 'suppliers:create' %}" class="btn btn-primary">+ Yangi supplier</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto"><input type="text" name="q" class="form-control" placeholder="Ism bo'yicha qidirish" value="{{ request.GET.q }}"></div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Qidirish</button></div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>Nomi</th><th>Telefon</th><th class="text-end">Jami xarid</th><th class="text-end">Qarz</th><th>Holat</th><th></th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'suppliers:detail' row.supplier.pk %}">{{ row.supplier.name }}</a></td>
+                    <td>{{ row.supplier.phone }}</td>
+                    <td class="text-end">{{ row.total_purchases|floatformat:0|intcomma }}</td>
+                    <td class="text-end {% if row.debt > 0 %}text-danger{% endif %}">{{ row.debt|floatformat:0|intcomma }}</td>
+                    <td>{% if row.supplier.active %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Nofaol</span>{% endif %}</td>
+                    <td><a href="{% url 'suppliers:detail' row.supplier.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">Supplier topilmadi.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

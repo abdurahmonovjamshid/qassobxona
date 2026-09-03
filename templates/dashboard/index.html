@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Dashboard — Qassobxona{% endblock %}
+{% block content %}
+<h4 class="mb-3">📊 Qassobxona Dashboard <small class="text-muted fs-6">({{ today|date:"d.m.Y" }})</small></h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Bugungi savdo</div>
+                <div class="stat-value text-primary">{{ today_sales_total|floatformat:0|intcomma }} so'm</div>
+                <small class="text-muted">{{ today_sales_count }} ta sotuv</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Bugungi sof foyda</div>
+                <div class="stat-value text-success">{{ today_net_profit|floatformat:0|intcomma }} so'm</div>
+                <small class="text-muted">Yalpi: {{ today_gross_profit|floatformat:0|intcomma }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Debitor (mijozlar qarzi)</div>
+                <div class="stat-value text-warning">{{ debitor_total|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Kreditor (bizning qarzimiz)</div>
+                <div class="stat-value text-danger">{{ creditor_total|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Ombor (jami)</div>
+                <div class="stat-value">{{ total_stock|floatformat:3 }} kg</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Bugungi xarajat</div>
+                <div class="stat-value">{{ today_expenses|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Mijozlardan to'lov (bugun)</div>
+                <div class="stat-value">{{ customer_payments_today|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Naqd qoldiq (taxminiy)</div>
+                <div class="stat-value">{{ naqd_qoldiq|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">So'nggi 14 kunlik savdo</div>
+            <div class="card-body"><canvas id="dailySalesChart" height="90"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Debitor / Kreditor</div>
+            <div class="card-body"><canvas id="debtChart" height="90"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-5">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Shu oy eng ko'p sotilgan mahsulotlar</div>
+            <div class="card-body"><canvas id="topProductsChart" height="120"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Ombor qoldig'i (top 10)</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Mahsulot</th><th class="text-end">Qoldiq (kg)</th></tr></thead>
+                    <tbody>
+                    {% for row in stock_rows %}
+                        <tr>
+                            <td>{{ row.product.name }}</td>
+                            <td class="text-end">{{ row.quantity|floatformat:3 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted">Ombor bo'sh</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    new Chart(document.getElementById('dailySalesChart'), {
+        type: 'line',
+        data: {
+            labels: {{ daily_labels|safe }},
+            datasets: [{
+                label: "Savdo (so'm)",
+                data: {{ daily_values|safe }},
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13,110,253,0.15)',
+                fill: true,
+                tension: 0.3,
+            }],
+        },
+        options: { plugins: { legend: { display: false } } },
+    });
+
+    new Chart(document.getElementById('debtChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Debitor', 'Kreditor'],
+            datasets: [{ data: {{ debitor_creditor_values|safe }}, backgroundColor: ['#ffc107', '#dc3545'] }],
+        },
+    });
+
+    new Chart(document.getElementById('topProductsChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_products_labels|safe }},
+            datasets: [{ label: 'kg', data: {{ top_products_values|safe }}, backgroundColor: '#198754' }],
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } },
+    });
+</script>
+{% endblock %}

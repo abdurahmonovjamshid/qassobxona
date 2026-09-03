@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Kirish — Qassobxona{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4 mt-5">
+        <div class="card table-card">
+            <div class="card-body p-4">
+                <h4 class="text-center mb-4">🥩 Qassobxona</h4>
+                {% if form.errors %}
+                    <div class="alert alert-danger">Login yoki parol noto'g'ri.</div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="id_username">Login</label>
+                        <input type="text" name="username" class="form-control" id="id_username" autofocus required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="id_password">Parol</label>
+                        <input type="password" name="password" class="form-control" id="id_password" required>
+                    </div>
+                    <input type="hidden" name="next" value="{{ next }}">
+                    <button type="submit" class="btn btn-dark w-100">Kirish</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

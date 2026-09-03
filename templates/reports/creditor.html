@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Kreditor hisoboti{% endblock %}
+{% block content %}
+<h4 class="mb-3">Kreditor hisoboti (yetkazib beruvchilarga qarz)</h4>
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Yetkazib beruvchi</th><th>Telefon</th><th class="text-end">Jami qarz</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'suppliers:detail' row.supplier.pk %}">{{ row.supplier.name }}</a></td>
+                    <td>{{ row.supplier.phone }}</td>
+                    <td class="text-end text-danger fw-bold">{{ row.debt|floatformat:0|intcomma }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-4">Qarzdorlik yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

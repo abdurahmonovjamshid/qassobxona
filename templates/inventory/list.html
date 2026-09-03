@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Ombor{% endblock %}
+{% block content %}
+<h4 class="mb-3">📦 Ombor</h4>
+
+<ul class="nav nav-tabs mb-3" id="invTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#stock-tab" type="button">Qoldiq</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#movements-tab" type="button">Harakatlar tarixi</button></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="stock-tab">
+        <div class="card table-card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead><tr><th></th><th>Mahsulot</th><th>Kategoriya</th><th class="text-end">Qoldiq</th><th class="text-end">O'rtacha tannarx</th></tr></thead>
+                    <tbody>
+                    {% for row in stock_rows %}
+                        <tr class="{% if row.quantity <= 0 %}text-muted{% endif %}">
+                            <td>{% include "partials/product_thumb.html" with product=row.product %}</td>
+                            <td>{{ row.product.name }}</td>
+                            <td>{{ row.product.get_category_display }}</td>
+                            <td class="text-end {% if row.quantity <= 0 %}text-danger{% endif %}">{{ row.quantity|floatformat:3 }} kg</td>
+                            <td class="text-end">{{ row.avg_cost|floatformat:0|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="movements-tab">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-12 col-md-auto">
+                <select name="product" class="form-select">
+                    <option value="">Barcha mahsulot</option>
+                    {% for p in products %}
+                        <option value="{{ p.id }}" {% if request.GET.product == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-auto">
+                <select name="movement_type" class="form-select">
+                    <option value="">Barcha turi</option>
+                    {% for code, label in movement_types %}
+                        <option value="{{ code }}" {% if request.GET.movement_type == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+        </form>
+        <div class="card table-card">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead><tr><th></th><th>Sana</th><th>Mahsulot</th><th>Turi</th><th>Yo'nalish</th><th class="text-end">Miqdor</th><th class="text-end">Tannarx</th><th>Havola</th></tr></thead>
+                    <tbody>
+                    {% for m in movements %}
+                        <tr>
+                            <td>{% include "partials/product_thumb.html" with product=m.product %}</td>
+                            <td>{{ m.date|date:"d.m.Y" }}</td>
+                            <td>{{ m.product.name }}</td>
+                            <td>{{ m.get_movement_type_display }}</td>
+                            <td>{% if m.direction == 'IN' %}<span class="text-success">Kirim</span>{% else %}<span class="text-danger">Chiqim</span>{% endif %}</td>
+                            <td class="text-end">{{ m.quantity|floatformat:3 }}</td>
+                            <td class="text-end">{{ m.unit_cost|floatformat:0|intcomma }}</td>
+                            <td class="small text-muted">{{ m.reference }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

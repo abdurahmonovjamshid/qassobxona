@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Yangi to'lov{% endblock %}
+{% block content %}
+<h4 class="mb-3">💵 Yangi to'lov</h4>
+<form method="post" class="card table-card p-4" style="max-width: 600px;">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Mijoz (agar mijozdan bo'lsa)</label>
+            {{ form.customer }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Yetkazib beruvchi (agar supplierga bo'lsa)</label>
+            {{ form.supplier }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Bog'liq sotuv (ixtiyoriy)</label>
+            {{ form.sale }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Bog'liq xarid (ixtiyoriy)</label>
+            {{ form.purchase }}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Summa</label>
+            {{ form.amount }}{{ form.amount.errors }}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Turi</label>
+            {{ form.payment_type }}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Sana</label>
+            {{ form.date }}
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Izoh</label>
+            {{ form.notes }}
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Saqlash</button>
+</form>
+{% endblock %}

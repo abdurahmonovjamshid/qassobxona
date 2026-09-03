@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Savdo hisoboti{% endblock %}
+{% block content %}
+<h4 class="mb-3">Savdo hisoboti</h4>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}"></div>
+    <div class="col-12 col-md-auto">
+        <select name="customer" class="form-select">
+            <option value="">Barcha mijoz</option>
+            {% for c in customers %}<option value="{{ c.id }}" {% if request.GET.customer == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto">
+        <select name="product" class="form-select">
+            <option value="">Barcha mahsulot</option>
+            {% for p in products %}<option value="{{ p.id }}" {% if request.GET.product == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Jami savdo</div><div class="stat-value">{{ total_amount|floatformat:0|intcomma }}</div></div></div></div>
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">To'langan</div><div class="stat-value text-success">{{ total_paid|floatformat:0|intcomma }}</div></div></div></div>
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ total_debt|floatformat:0|intcomma }}</div></div></div></div>
+</div>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>№</th><th>Sana</th><th>Mijoz</th><th class="text-end">Jami</th><th class="text-end">Qarz</th></tr></thead>
+            <tbody>
+            {% for sale in sales %}
+                <tr>
+                    <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_number }}</a></td>
+                    <td>{{ sale.date|date:"d.m.Y" }}</td>
+                    <td>{{ sale.customer.name }}</td>
+                    <td class="text-end">{{ sale.total_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ sale.debt_amount|floatformat:0|intcomma }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Ma'lumot yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

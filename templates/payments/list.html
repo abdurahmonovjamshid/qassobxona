@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}To'lovlar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">To'lovlar</h4>
+    <a href="{% url 'payments:create' %}" class="btn btn-primary">+ Yangi to'lov</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}"></div>
+    <div class="col-12 col-md-auto">
+        <select name="payment_type" class="form-select">
+            <option value="">Barcha turi</option>
+            {% for code, label in payment_types %}
+                <option value="{{ code }}" {% if request.GET.payment_type == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>Sana</th><th>Kimga/kimdan</th><th>Turi</th><th>Bog'liq</th><th class="text-end">Summa</th></tr></thead>
+            <tbody>
+            {% for p in payments %}
+                <tr>
+                    <td>{{ p.date|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if p.customer %}<a href="{% url 'customers:detail' p.customer.pk %}">{{ p.customer.name }}</a>{% endif %}
+                        {% if p.supplier %}<a href="{% url 'suppliers:detail' p.supplier.pk %}">{{ p.supplier.name }}</a>{% endif %}
+                    </td>
+                    <td>{{ p.get_payment_type_display }}</td>
+                    <td>
+                        {% if p.sale %}<a href="{% url 'sales:detail' p.sale.pk %}">{{ p.sale.sale_number }}</a>{% endif %}
+                        {% if p.purchase %}<a href="{% url 'purchases:detail' p.purchase.pk %}">{{ p.purchase.purchase_number }}</a>{% endif %}
+                    </td>
+                    <td class="text-end">{{ p.amount|floatformat:0|intcomma }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">To'lov yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
