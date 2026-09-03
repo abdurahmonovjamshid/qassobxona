@@ -8,6 +8,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from apps.common.date_filters import get_date_range
 from apps.customers.models import Customer
 from apps.inventory.services import inventory_service
 from apps.payments.services import payment_service
@@ -28,6 +29,8 @@ def _products_json():
             'unit': p.unit,
             'image': p.image.url if p.image else None,
             'stock': str(stock_map.get(p.id, 0)),
+            'category': p.category,
+            'category_label': p.get_category_display(),
         }
         for p in products
     ])
@@ -92,8 +95,7 @@ def sale_list(request):
 
     customer_id = request.GET.get('customer')
     status = request.GET.get('status')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
+    date_from, date_to = get_date_range(request)
 
     if customer_id:
         sales = sales.filter(customer_id=customer_id)
@@ -107,6 +109,8 @@ def sale_list(request):
     return render(request, 'sales/list.html', {
         'sales': sales[:200],
         'statuses': Sale.Status.choices,
+        'date_from': date_from,
+        'date_to': date_to,
     })
 
 

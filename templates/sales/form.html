@@ -26,7 +26,13 @@
                 {{ form.date.errors }}
             </div>
             <div class="col-6 col-md-3">
-                <label class="form-label">{{ form.paid_amount.label }}</label>
+                <label class="form-label d-flex justify-content-between align-items-center flex-wrap gap-1">
+                    <span>{{ form.paid_amount.label }}</span>
+                    <span class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" id="pay-half">50%</button>
+                        <button type="button" class="btn btn-outline-secondary" id="pay-full">Hammasi</button>
+                    </span>
+                </label>
                 {{ form.paid_amount }}
             </div>
         </div>
@@ -40,7 +46,23 @@
 
     <div class="card table-card mb-3">
         <div class="card-header bg-white">
-            <input type="text" id="catalog-search" class="form-control" placeholder="🔍 Mahsulot qidirish...">
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <input type="text" id="catalog-search" class="form-control flex-grow-1" style="min-width:160px" placeholder="🔍 Mahsulot qidirish...">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        Kategoriya
+                    </button>
+                    <div class="dropdown-menu p-2 category-dropdown-menu">
+                        <input type="text" id="category-search" class="form-control form-control-sm mb-2" placeholder="Kategoriya qidirish...">
+                        <div id="category-checklist"></div>
+                    </div>
+                </div>
+                <div class="form-check form-switch mb-0 text-nowrap">
+                    <input class="form-check-input" type="checkbox" id="show-out-of-stock">
+                    <label class="form-check-label small" for="show-out-of-stock">Omborda yo'qlarni ham ko'rsatish</label>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="row g-2" id="product-catalog"></div>

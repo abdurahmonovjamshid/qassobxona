@@ -10,6 +10,7 @@ from django.utils import timezone
 from apps.butchering.forms import ButcheringForm, ButcheringOutputFormSet
 from apps.butchering.models import Butchering
 from apps.butchering.services import butchering_service
+from apps.common.date_filters import get_date_range
 from apps.products.models import Product
 from apps.purchases.models import Purchase
 
@@ -38,11 +39,18 @@ def _purchases_json():
 def butchering_list(request):
     items = Butchering.objects.select_related('purchase', 'input_product').all()
     status = request.GET.get('status')
+    date_from, date_to = get_date_range(request)
     if status:
         items = items.filter(status=status)
+    if date_from:
+        items = items.filter(date__gte=date_from)
+    if date_to:
+        items = items.filter(date__lte=date_to)
     return render(request, 'butchering/list.html', {
         'items': items[:200],
         'statuses': Butchering.Status.choices,
+        'date_from': date_from,
+        'date_to': date_to,
     })
 
 

@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from apps.common.date_filters import get_date_range
 from apps.expenses.forms import ExpenseForm
 from apps.expenses.models import Expense, ExpenseCategory
 
@@ -11,8 +12,7 @@ from apps.expenses.models import Expense, ExpenseCategory
 def expense_list(request):
     expenses = Expense.objects.select_related('category').all()
     category_id = request.GET.get('category')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
+    date_from, date_to = get_date_range(request)
     if category_id:
         expenses = expenses.filter(category_id=category_id)
     if date_from:
@@ -23,6 +23,8 @@ def expense_list(request):
     return render(request, 'expenses/list.html', {
         'expenses': expenses[:200],
         'categories': ExpenseCategory.objects.filter(active=True),
+        'date_from': date_from,
+        'date_to': date_to,
     })
 
 

@@ -185,6 +185,15 @@ body {
 .catalog-qty {
     min-width: 0;
 }
+.category-dropdown-menu {
+    min-width: 240px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.category-dropdown-menu .form-check {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+}
 
 /* Savatcha (fixed pastki panel + offcanvas ro'yxati) */
 .cart-bar {

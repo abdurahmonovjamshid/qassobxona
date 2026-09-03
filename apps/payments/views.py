@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from apps.common.date_filters import get_date_range
 from apps.payments.forms import PaymentForm
 from apps.payments.models import Payment
 from apps.payments.services import payment_service
@@ -13,8 +14,7 @@ from apps.payments.services import payment_service
 def payment_list(request):
     payments = Payment.objects.select_related('customer', 'supplier', 'sale', 'purchase').all()
     payment_type = request.GET.get('payment_type')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
+    date_from, date_to = get_date_range(request)
     if payment_type:
         payments = payments.filter(payment_type=payment_type)
     if date_from:
@@ -25,6 +25,8 @@ def payment_list(request):
     return render(request, 'payments/list.html', {
         'payments': payments[:200],
         'payment_types': Payment.PaymentType.choices,
+        'date_from': date_from,
+        'date_to': date_to,
     })
 
 

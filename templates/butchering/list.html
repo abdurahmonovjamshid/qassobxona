@@ -8,6 +8,12 @@
 
 <form method="get" class="row g-2 mb-3">
     <div class="col-12 col-md-auto">
+        <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+    </div>
+    <div class="col-12 col-md-auto">
+        <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+    </div>
+    <div class="col-12 col-md-auto">
         <select name="status" class="form-select">
             <option value="">Barcha holat</option>
             {% for code, label in statuses %}
@@ -16,6 +22,7 @@
         </select>
     </div>
     <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+    <div class="col-12 col-md-auto"><a href="?all=1" class="btn btn-outline-secondary">Barchasi</a></div>
 </form>
 
 <div class="card table-card">

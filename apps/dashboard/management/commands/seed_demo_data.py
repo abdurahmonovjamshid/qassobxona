@@ -54,12 +54,12 @@ YIELD_FACTOR = Decimal('0.95')
 # qimmatroq bo'laklarga ajratish foydasi) real biznesdagidek aks etmaydi.
 PRODUCTS = [
     ('Mol (butun)', 'MOL-BUTUN', Product.Category.WHOLE, Decimal('0')),
-    ('Lahm', 'LAHM', Product.Category.MEAT, Decimal('110000')),
-    ('Son', 'SON', Product.Category.MEAT, Decimal('100000')),
-    ('Kurak', 'KURAK', Product.Category.MEAT, Decimal('95000')),
-    ("Qovurg'a", 'QOVURGA', Product.Category.MEAT, Decimal('90000')),
-    ("Bo'yin", 'BOYIN', Product.Category.MEAT, Decimal('85000')),
-    ('Qiyma', 'QIYMA', Product.Category.MEAT, Decimal('98000')),
+    ('Lahm', 'LAHM', Product.Category.BEEF, Decimal('110000')),
+    ('Son', 'SON', Product.Category.BEEF, Decimal('100000')),
+    ('Kurak', 'KURAK', Product.Category.BEEF, Decimal('95000')),
+    ("Qovurg'a", 'QOVURGA', Product.Category.BEEF, Decimal('90000')),
+    ("Bo'yin", 'BOYIN', Product.Category.BEEF, Decimal('85000')),
+    ('Qiyma', 'QIYMA', Product.Category.BEEF, Decimal('98000')),
     ('Suyak', 'SUYAK', Product.Category.BONE, Decimal('30000')),
     ("Yog'", 'YOG', Product.Category.FAT, Decimal('40000')),
     ('Chiqit', 'CHIQIT', Product.Category.WASTE, Decimal('8000')),

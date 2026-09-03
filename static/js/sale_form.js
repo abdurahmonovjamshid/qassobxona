@@ -8,8 +8,11 @@
     const formatMoney = window.formatMoney;
     const attachSearchPicker = window.attachSearchPicker;
 
-    function trimNum(n) {
-        return (Math.round(n * 1000) / 1000).toString();
+    // Ombor qoldig'ini har doim "50.5" kabi aniq bitta kasr xona bilan
+    // ko'rsatish uchun (haqiqiy hisob-kitoblarda to'liq aniqlik saqlanadi,
+    // faqat ko'rinishda yaxlitlanadi).
+    function formatStock(n) {
+        return (Math.round(n * 10) / 10).toFixed(1);
     }
 
     function initCustomerPicker(data) {
@@ -42,6 +45,9 @@
         const catalogEl = document.getElementById('product-catalog');
         const catalogEmptyEl = document.getElementById('catalog-empty');
         const searchInput = document.getElementById('catalog-search');
+        const categorySearchInput = document.getElementById('category-search');
+        const categoryChecklistEl = document.getElementById('category-checklist');
+        const showOutOfStockEl = document.getElementById('show-out-of-stock');
         const cartLinesEl = document.getElementById('cart-lines');
         const cartEmptyEl = document.getElementById('cart-empty');
         const hiddenItemsEl = document.getElementById('hidden-items');
@@ -49,7 +55,45 @@
         const cartBarCount = document.getElementById('cart-bar-count');
         const cartBarTotal = document.getElementById('cart-bar-total');
         const grandTotalEl = document.getElementById('grand-total');
+        const paidAmountInput = document.getElementById('id_paid_amount');
+        const payFullBtn = document.getElementById('pay-full');
+        const payHalfBtn = document.getElementById('pay-half');
         if (!catalogEl || !totalFormsInput) return;
+
+        let currentGrandTotal = 0;
+
+        // --- Kategoriya checklisti ---
+        const allCategories = [];
+        const seenCategories = new Set();
+        products.forEach((p) => {
+            if (p.category && !seenCategories.has(p.category)) {
+                seenCategories.add(p.category);
+                allCategories.push({ code: p.category, label: p.category_label || p.category });
+            }
+        });
+        const checkedCategories = new Set(allCategories.map((c) => c.code));
+
+        function renderCategoryChecklist() {
+            if (!categoryChecklistEl) return;
+            const q = (categorySearchInput.value || '').trim().toLowerCase();
+            categoryChecklistEl.innerHTML = '';
+            allCategories
+                .filter((c) => c.label.toLowerCase().includes(q))
+                .forEach((c) => {
+                    const id = `cat-${c.code}`;
+                    const wrap = document.createElement('div');
+                    wrap.className = 'form-check';
+                    wrap.innerHTML = `
+                        <input class="form-check-input" type="checkbox" id="${id}"${checkedCategories.has(c.code) ? ' checked' : ''}>
+                        <label class="form-check-label" for="${id}">${c.label}</label>`;
+                    wrap.querySelector('input').addEventListener('change', (e) => {
+                        if (e.target.checked) checkedCategories.add(c.code);
+                        else checkedCategories.delete(c.code);
+                        renderCatalog();
+                    });
+                    categoryChecklistEl.appendChild(wrap);
+                });
+        }
 
         function cartQtyFor(productId) {
             return cart.filter((c) => c.productId === productId).reduce((s, c) => s + c.quantity, 0);
@@ -84,12 +128,17 @@
 
         function renderCatalog() {
             const q = (searchInput.value || '').trim().toLowerCase();
-            const filtered = q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
+            const showOOS = !!(showOutOfStockEl && showOutOfStockEl.checked);
+            let filtered = products.filter((p) => checkedCategories.has(p.category));
+            if (q) filtered = filtered.filter((p) => p.name.toLowerCase().includes(q));
+            if (!showOOS) {
+                filtered = filtered.filter((p) => remainingStock(p) > 0 || cartQtyFor(p.id) > 0);
+            }
             catalogEl.innerHTML = '';
             catalogEmptyEl.classList.toggle('d-none', filtered.length > 0);
             filtered.forEach((p) => {
                 const remaining = remainingStock(p);
-                const stockText = remaining <= 0 ? "Omborda yo'q" : `${trimNum(remaining)} ${p.unit} mavjud`;
+                const stockText = remaining <= 0 ? "Omborda yo'q" : `${formatStock(remaining)} ${p.unit} mavjud`;
                 const stockClass = remaining <= 0 ? 'text-danger' : 'text-muted';
                 const inCartQty = cartQtyFor(p.id);
                 const img = p.image
@@ -104,18 +153,30 @@
                             <div class="product-card-name">${p.name}</div>
                             <div class="product-card-price">${formatMoney(parseFloat(p.price))} so'm/${p.unit}</div>
                             <div class="product-card-stock ${stockClass}">${stockText}</div>
-                            ${inCartQty > 0 ? `<div class="product-card-in-cart">Savatda: ${trimNum(inCartQty)} ${p.unit}</div>` : ''}
+                            ${inCartQty > 0 ? `<div class="product-card-in-cart">Savatda: ${formatStock(inCartQty)} ${p.unit}</div>` : ''}
                             <div class="d-flex gap-1 mt-2">
                                 <input type="number" class="form-control form-control-sm catalog-qty" inputmode="decimal" step="0.001" min="0" placeholder="kg">
                                 <button type="button" class="btn btn-sm btn-primary catalog-add">+</button>
                             </div>
+                            <div class="small text-danger mt-1 d-none catalog-error"></div>
                         </div>
                     </div>`;
                 const qtyInput = wrap.querySelector('.catalog-qty');
                 const addBtn = wrap.querySelector('.catalog-add');
+                const errorEl = wrap.querySelector('.catalog-error');
                 function doAdd() {
+                    errorEl.classList.add('d-none');
                     const qty = parseFloat(qtyInput.value);
                     if (!qty || qty <= 0) {
+                        qtyInput.focus();
+                        return;
+                    }
+                    const avail = remainingStock(p);
+                    if (qty > avail) {
+                        errorEl.textContent = avail > 0
+                            ? `Omborda faqat ${formatStock(avail)} ${p.unit} bor.`
+                            : "Bu mahsulot omborda yo'q.";
+                        errorEl.classList.remove('d-none');
                         qtyInput.focus();
                         return;
                     }
@@ -134,6 +195,7 @@
             cart.forEach((it) => {
                 sum += Math.max(0, it.quantity * it.price - it.discount);
             });
+            currentGrandTotal = sum;
             grandTotalEl.textContent = formatMoney(sum) + " so'm";
             cartBarTotal.textContent = formatMoney(sum);
             cartBarCount.textContent = `${cart.length} mahsulot`;
@@ -178,10 +240,20 @@
                 }
                 qtyEl.addEventListener('input', liveUpdate);
                 priceEl.addEventListener('input', liveUpdate);
-                // Fokusdan chiqqanda: bo'sh/0 miqdorli qatorlarni tozalash va
-                // katalogdagi ombor qoldig'i ko'rsatkichini yangilash uchun
-                // to'liq qayta chizish.
-                qtyEl.addEventListener('change', renderAll);
+                // Fokusdan chiqqanda: ombordan ko'p miqdor kiritilgan bo'lsa
+                // qoldiqqa moslashtirish, bo'sh/0 qatorlarni tozalash va
+                // katalogdagi ombor ko'rsatkichini yangilash uchun to'liq
+                // qayta chizish.
+                function handleBlur() {
+                    const product = products.find((pp) => pp.id === item.productId);
+                    const stock = product ? (parseFloat(product.stock) || 0) : Infinity;
+                    if (item.quantity > stock) {
+                        alert(`Omborda faqat ${formatStock(stock)} ${item.unit} bor. Miqdor shunga moslashtirildi.`);
+                        item.quantity = stock;
+                    }
+                    renderAll();
+                }
+                qtyEl.addEventListener('change', handleBlur);
                 priceEl.addEventListener('change', renderAll);
                 row.querySelector('.row-remove-btn').addEventListener('click', () => removeFromCart(index));
                 cartLinesEl.appendChild(row);
@@ -211,6 +283,19 @@
         }
 
         searchInput.addEventListener('input', renderCatalog);
+        if (showOutOfStockEl) showOutOfStockEl.addEventListener('change', renderCatalog);
+        if (categorySearchInput) categorySearchInput.addEventListener('input', renderCategoryChecklist);
+
+        if (payFullBtn) {
+            payFullBtn.addEventListener('click', () => {
+                paidAmountInput.value = Math.round(currentGrandTotal);
+            });
+        }
+        if (payHalfBtn) {
+            payHalfBtn.addEventListener('click', () => {
+                paidAmountInput.value = Math.round(currentGrandTotal / 2);
+            });
+        }
 
         document.getElementById('sale-form').addEventListener('submit', (e) => {
             if (cart.length === 0) {
@@ -223,6 +308,7 @@
             }
         });
 
+        renderCategoryChecklist();
         renderAll();
     };
 })();

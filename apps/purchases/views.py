@@ -8,6 +8,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from apps.common.date_filters import get_date_range
 from apps.payments.services import payment_service
 from apps.products.models import Product
 from apps.purchases.forms import PurchaseExpenseFormSet, PurchaseForm
@@ -37,8 +38,7 @@ def purchase_list(request):
 
     supplier_id = request.GET.get('supplier')
     status = request.GET.get('status')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
+    date_from, date_to = get_date_range(request)
 
     if supplier_id:
         purchases = purchases.filter(supplier_id=supplier_id)
@@ -52,6 +52,8 @@ def purchase_list(request):
     return render(request, 'purchases/list.html', {
         'purchases': purchases[:200],
         'statuses': Purchase.Status.choices,
+        'date_from': date_from,
+        'date_to': date_to,
     })
 
 
