@@ -12,12 +12,13 @@ from apps.purchases.models import Purchase
 class ButcheringForm(forms.ModelForm):
     class Meta:
         model = Butchering
-        fields = ['purchase', 'input_product', 'specification', 'input_weight', 'date', 'notes']
+        fields = ['purchase', 'input_product', 'specification', 'input_weight', 'input_pieces', 'date', 'notes']
         widgets = {
             'purchase': forms.Select(attrs={'class': 'form-select', 'data-role': 'purchase-select'}),
             'input_product': forms.Select(attrs={'class': 'form-select', 'data-role': 'input-product-select'}),
             'specification': forms.Select(attrs={'class': 'form-select', 'data-role': 'specification-select'}),
             'input_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0', 'data-role': 'input-weight'}),
+            'input_pieces': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0', 'data-role': 'input-pieces'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
@@ -32,7 +33,12 @@ class ButcheringForm(forms.ModelForm):
         ).distinct()
         self.fields['specification'].queryset = ButcheringSpecification.objects.filter(active=True)
         self.fields['specification'].required = False
+        self.fields['input_pieces'].required = False
+        self.fields['input_pieces'].initial = None
         self.fields['notes'].required = False
+
+    def clean_input_pieces(self):
+        return self.cleaned_data.get('input_pieces') or 0
 
 
 class ButcheringOutputForm(forms.ModelForm):

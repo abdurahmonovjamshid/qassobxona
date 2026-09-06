@@ -322,6 +322,7 @@ class Command(BaseCommand):
                 input_product=item.product,
                 specification=spec_info['spec'],
                 input_weight=item.net_weight,
+                input_pieces=item.pieces,
                 date=purchase.date,
                 status=Butchering.Status.DRAFT,
                 created_by=user,

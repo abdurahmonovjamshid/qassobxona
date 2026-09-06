@@ -24,7 +24,7 @@
 <div class="card table-card">
     <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
-            <thead><tr><th>Mahsulot (father)</th><th>Usul nomi</th><th>Chiqish mahsulotlari (child)</th><th>Holat</th></tr></thead>
+            <thead><tr><th>Mahsulot (father)</th><th>Usul nomi</th><th>Chiqish mahsulotlari (child)</th><th>Holat</th><th></th></tr></thead>
             <tbody>
             {% for spec in specs %}
                 <tr>
@@ -36,9 +36,10 @@
                         {% endfor %}
                     </td>
                     <td>{% if spec.active %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Nofaol</span>{% endif %}</td>
+                    <td><a href="{% url 'butchering:specification_update' spec.pk %}" class="btn btn-sm btn-outline-secondary">Tahrirlash</a></td>
                 </tr>
             {% empty %}
-                <tr><td colspan="4" class="text-center text-muted py-4">Spetsifikatsiya topilmadi.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-4">Spetsifikatsiya topilmadi.</td></tr>
             {% endfor %}
             </tbody>
         </table>

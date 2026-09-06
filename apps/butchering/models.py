@@ -55,6 +55,7 @@ class Butchering(models.Model):
         related_name='butcherings',
     )
     input_weight = models.DecimalField(max_digits=10, decimal_places=3)
+    input_pieces = models.PositiveIntegerField(default=0, help_text="Bo'laklanayotgan dona/bo'lak soni")
     output_weight = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     difference = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     yield_percentage = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -80,6 +81,12 @@ class Butchering(models.Model):
                 raise ValidationError(
                     f"Omborda yetarli mahsulot mavjud emas. "
                     f"Mavjud qoldiq: {available} kg ({self.input_product.name})"
+                )
+            available_pieces = inventory_service.get_stock_pieces(self.input_product)
+            if self.input_pieces and self.input_pieces > available_pieces:
+                raise ValidationError(
+                    f"Omborda yetarli dona/bo'lak mavjud emas. "
+                    f"Mavjud qoldiq: {available_pieces} dona ({self.input_product.name})"
                 )
 
     def __str__(self):

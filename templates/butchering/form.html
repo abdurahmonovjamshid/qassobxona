@@ -14,8 +14,8 @@
             <div class="fs-4 fw-semibold" id="input-product-name">Mahsulot tanlanmagan</div>
         </div>
         <div class="text-end">
-            <div class="text-muted small">Input vazn</div>
-            <div class="fs-4 fw-bold" id="input-weight-display">0.000 kg</div>
+            <div class="text-muted small">Input vazn / soni</div>
+            <div class="fs-4 fw-bold" id="input-weight-display">0.000 kg / 0 dona</div>
         </div>
     </div>
 </div>
@@ -27,7 +27,7 @@
     {% endif %}
     <div class="card table-card mb-3">
         <div class="card-body row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Xarid (tasdiqlangan)</label>
                 {{ form.purchase }}{{ form.purchase.errors }}
                 <div class="form-text">Xaridni tanlasangiz, mahsulot va vazn avtomatik to'ldiriladi.</div>
@@ -40,13 +40,17 @@
             <div class="col-md-3">
                 <label class="form-label">Bo'laklash usuli (spetsifikatsiya)</label>
                 {{ form.specification }}{{ form.specification.errors }}
-                <div class="form-text">Tanlansa, output qatorlari avtomatik to'ldiriladi.</div>
+                <div class="form-text">Tanlansa, output kartochkalari avtomatik chiqadi.</div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Input vazn (kg)</label>
+            <div class="col-md-1">
+                <label class="form-label">Vazn (kg)</label>
                 {{ form.input_weight }}{{ form.input_weight.errors }}
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
+                <label class="form-label">Soni</label>
+                {{ form.input_pieces }}{{ form.input_pieces.errors }}
+            </div>
+            <div class="col-md-1">
                 <label class="form-label">Sana</label>
                 {{ form.date }}{{ form.date.errors }}
             </div>
@@ -61,29 +65,17 @@
     {% if formset.non_form_errors %}
         <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
     {% endif %}
+    <div id="hidden-outputs" class="d-none"></div>
 
     <div class="card table-card mb-3">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-white">
             <span>Bo'laklash natijalari (output mahsulotlar)</span>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="add-output-rows">+ Qo'shish</button>
         </div>
-        <div class="table-responsive">
-            <table class="table mb-0 align-middle">
-                <thead><tr><th style="width:8%"></th><th style="width:36%">Mahsulot</th><th>Miqdor (kg)</th><th>Soni (dona)</th><th></th></tr></thead>
-                <tbody id="output-rows">
-                {% for out_form in formset %}
-                    <tr class="formset-row">
-                        <td class="output-thumb">{% include "partials/product_thumb.html" %}</td>
-                        <td>{{ out_form.id }}{{ out_form.product }}{{ out_form.product.errors }}</td>
-                        <td>{{ out_form.quantity }}{{ out_form.quantity.errors }}</td>
-                        <td>{{ out_form.pieces }}{{ out_form.pieces.errors }}</td>
-                        <td class="text-center">
-                            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+        <div class="card-body">
+            <div class="row g-2" id="output-cards"></div>
+            <div id="output-cards-empty" class="text-center text-muted py-4">
+                Avval input mahsulot va spetsifikatsiya (bo'laklash usuli) tanlang — chiqish mahsulotlari shu yerda avtomatik chiqadi.
+            </div>
         </div>
     </div>
 
@@ -116,7 +108,7 @@
         <div class="card-body row g-3 text-end">
             <div class="col-md-3">
                 <div class="stat-label">Output jami</div>
-                <div class="fs-5 fw-semibold" id="output-total">0.000 kg</div>
+                <div class="fs-5 fw-semibold" id="output-total">0.000 kg / 0 dona</div>
             </div>
             <div class="col-md-3">
                 <div class="stat-label">Farq (input − output)</div>
@@ -137,20 +129,6 @@
         <button type="submit" class="btn btn-success btn-lg">BO'LAKLASHNI TASDIQLASH</button>
     </div>
 </form>
-
-<template id="output-empty-form">
-<table><tbody>
-    <tr class="formset-row">
-        <td class="output-thumb"><div class="product-thumb-placeholder">🥩</div></td>
-        <td>{{ formset.empty_form.id }}{{ formset.empty_form.product }}</td>
-        <td>{{ formset.empty_form.quantity }}</td>
-        <td>{{ formset.empty_form.pieces }}</td>
-        <td class="text-center">
-            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
-        </td>
-    </tr>
-</tbody></table>
-</template>
 
 <template id="expense-empty-form">
 <table><tbody>
@@ -176,6 +154,7 @@
             products: {{ products_json|safe }},
             purchases: {{ purchases_json|safe }},
             specifications: {{ specifications_json|safe }},
+            initialOutputs: {{ outputs_json|safe }},
             formsetPrefix: '{{ formset.prefix }}',
             expenseFormsetPrefix: '{{ expense_formset.prefix }}',
         });

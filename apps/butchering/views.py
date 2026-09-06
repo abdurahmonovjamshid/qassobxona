@@ -19,11 +19,47 @@ from apps.purchases.models import Purchase
 
 
 def _products_json():
-    products = Product.objects.filter(active=True).order_by('name')
+    products = Product.objects.filter(active=True).select_related('category').order_by('name')
     return json.dumps([
-        {'id': p.id, 'name': p.name, 'image': p.image.url if p.image else None}
+        {
+            'id': p.id, 'name': p.name, 'image': p.image.url if p.image else None,
+            'category': p.category.code, 'category_label': p.category.name,
+        }
         for p in products
     ])
+
+
+def _outputs_json_from_formset(formset):
+    """Validatsiya xatosidan keyin formani qayta ko'rsatishda output
+    kartochkalarini tiklash uchun — bog'langan formset qatorlaridan
+    mahsulot/miqdor/son o'qib, JS kutgan shaklga o'giradi."""
+    rows = []
+    for f in formset.forms:
+        product_id = f['product'].value()
+        if not product_id:
+            continue
+        rows.append({
+            'product_id': product_id,
+            'quantity': f['quantity'].value() or '0',
+            'pieces': f['pieces'].value() or '0',
+        })
+    if not rows:
+        return '[]'
+
+    products = Product.objects.in_bulk([r['product_id'] for r in rows])
+    outputs = []
+    for r in rows:
+        product = products.get(int(r['product_id']))
+        if not product:
+            continue
+        outputs.append({
+            'id': product.id,
+            'name': product.name,
+            'image': product.image.url if product.image else None,
+            'quantity': r['quantity'],
+            'pieces': r['pieces'],
+        })
+    return json.dumps(outputs)
 
 
 def _specifications_json():
@@ -98,6 +134,7 @@ def butchering_create(request):
         else:
             formset = ButcheringOutputFormSet(request.POST, prefix='outputs')
             expense_formset = ButcheringExpenseFormSet(request.POST, prefix='expenses')
+        outputs_json = _outputs_json_from_formset(formset)
     else:
         initial = {'date': timezone.localdate()}
         purchase_id = request.GET.get('purchase')
@@ -109,15 +146,18 @@ def butchering_create(request):
                 if len(items) == 1:
                     initial['input_product'] = items[0].product_id
                     initial['input_weight'] = items[0].net_weight
+                    initial['input_pieces'] = items[0].pieces
         form = ButcheringForm(initial=initial)
         formset = ButcheringOutputFormSet(prefix='outputs')
         expense_formset = ButcheringExpenseFormSet(prefix='expenses')
+        outputs_json = '[]'
 
     return render(request, 'butchering/form.html', {
         'form': form, 'formset': formset, 'expense_formset': expense_formset,
         'products_json': _products_json(),
         'purchases_json': _purchases_json(),
         'specifications_json': _specifications_json(),
+        'outputs_json': outputs_json,
     })
 
 
@@ -180,4 +220,28 @@ def specification_create(request):
         form = ButcheringSpecificationForm(initial=initial)
         formset = ButcheringSpecificationItemFormSet()
 
-    return render(request, 'butchering/specification_form.html', {'form': form, 'formset': formset})
+    return render(request, 'butchering/specification_form.html', {'form': form, 'formset': formset, 'title': 'Yangi spetsifikatsiya'})
+
+
+@login_required
+def specification_update(request, pk):
+    spec = get_object_or_404(ButcheringSpecification, pk=pk)
+    if request.method == 'POST':
+        form = ButcheringSpecificationForm(request.POST, instance=spec)
+        if form.is_valid():
+            formset = ButcheringSpecificationItemFormSet(request.POST, instance=spec)
+            if formset.is_valid():
+                with transaction.atomic():
+                    form.save()
+                    formset.save()
+                messages.success(request, f"'{spec.name}' spetsifikatsiyasi yangilandi.")
+                return redirect('butchering:specification_list')
+        else:
+            formset = ButcheringSpecificationItemFormSet(request.POST, instance=spec)
+    else:
+        form = ButcheringSpecificationForm(instance=spec)
+        formset = ButcheringSpecificationItemFormSet(instance=spec)
+
+    return render(request, 'butchering/specification_form.html', {
+        'form': form, 'formset': formset, 'title': spec.name, 'spec': spec,
+    })

@@ -45,6 +45,7 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
     inventory_service.stock_out(
         product=butchering.input_product,
         quantity=butchering.input_weight,
+        pieces=butchering.input_pieces,
         movement_type=StockMovement.MovementType.BUTCHERING_OUT,
         unit_cost=input_unit_cost,
         reference=reference,
