@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Yangi supplier{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block content %}
-<h4 class="mb-3">Yangi yetkazib beruvchi</h4>
+<h4 class="mb-3">{{ title }}</h4>
 <form method="post" class="card table-card p-4" style="max-width: 500px;">
     {% csrf_token %}
     <div class="mb-3"><label class="form-label">Nomi</label>{{ form.name }}{{ form.name.errors }}</div>
     <div class="mb-3"><label class="form-label">Telefon</label>{{ form.phone }}</div>
     <div class="mb-3"><label class="form-label">Manzil</label>{{ form.address }}</div>
+    <div class="mb-3"><label class="form-label">Boshlang'ich saldo</label>{{ form.opening_balance }}{{ form.opening_balance.errors }}</div>
     <div class="mb-3"><label class="form-label">Izoh</label>{{ form.notes }}</div>
     <div class="form-check mb-3">{{ form.active }}<label class="form-check-label">Faol</label></div>
     <button type="submit" class="btn btn-primary">Saqlash</button>

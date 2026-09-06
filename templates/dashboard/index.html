@@ -74,6 +74,14 @@
             </div>
         </div>
     </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Kassa balansi</div>
+                <div class="stat-value {% if kassa_balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ kassa_balance|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">
@@ -119,6 +127,21 @@
         </div>
     </div>
 </div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Shu oy top 10 mijoz (sotuv summasi bo'yicha)</div>
+            <div class="card-body"><canvas id="topCustomersChart" height="140"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Shu oy top 10 yetkazib beruvchi (xarid summasi bo'yicha)</div>
+            <div class="card-body"><canvas id="topSuppliersChart" height="140"></canvas></div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -153,6 +176,24 @@
         data: {
             labels: {{ top_products_labels|safe }},
             datasets: [{ label: 'kg', data: {{ top_products_values|safe }}, backgroundColor: '#198754' }],
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } },
+    });
+
+    new Chart(document.getElementById('topCustomersChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_customers_labels|safe }},
+            datasets: [{ label: "so'm", data: {{ top_customers_values|safe }}, backgroundColor: '#0d6efd' }],
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } },
+    });
+
+    new Chart(document.getElementById('topSuppliersChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_suppliers_labels|safe }},
+            datasets: [{ label: "so'm", data: {{ top_suppliers_values|safe }}, backgroundColor: '#fd7e14' }],
         },
         options: { indexAxis: 'y', plugins: { legend: { display: false } } },
     });

@@ -38,6 +38,7 @@
             unit: c.unit,
             image: c.image,
             quantity: parseFloat(c.quantity) || 0,
+            pieces: parseInt(c.pieces, 10) || 0,
             price: parseFloat(c.price) || 0,
             discount: parseFloat(c.discount) || 0,
         }));
@@ -103,10 +104,19 @@
             return (parseFloat(product.stock) || 0) - cartQtyFor(product.id);
         }
 
-        function addToCart(product, qty) {
+        function cartPiecesFor(productId) {
+            return cart.filter((c) => c.productId === productId).reduce((s, c) => s + c.pieces, 0);
+        }
+
+        function remainingPieces(product) {
+            return (parseInt(product.stock_pieces, 10) || 0) - cartPiecesFor(product.id);
+        }
+
+        function addToCart(product, qty, pieces) {
             const existing = cart.find((c) => c.productId === product.id);
             if (existing) {
                 existing.quantity = Math.round((existing.quantity + qty) * 1000) / 1000;
+                existing.pieces += (pieces || 0);
             } else {
                 cart.push({
                     productId: product.id,
@@ -114,6 +124,7 @@
                     unit: product.unit,
                     image: product.image,
                     quantity: qty,
+                    pieces: pieces || 0,
                     price: parseFloat(product.price) || 0,
                     discount: 0,
                 });
@@ -138,9 +149,11 @@
             catalogEmptyEl.classList.toggle('d-none', filtered.length > 0);
             filtered.forEach((p) => {
                 const remaining = remainingStock(p);
-                const stockText = remaining <= 0 ? "Omborda yo'q" : `${formatStock(remaining)} ${p.unit} mavjud`;
+                const remainingPcs = remainingPieces(p);
+                const stockText = remaining <= 0 ? "Omborda yo'q" : `${formatStock(remaining)} ${p.unit} / ${remainingPcs} dona mavjud`;
                 const stockClass = remaining <= 0 ? 'text-danger' : 'text-muted';
                 const inCartQty = cartQtyFor(p.id);
+                const inCartPcs = cartPiecesFor(p.id);
                 const img = p.image
                     ? `<img src="${p.image}" class="product-card-img" alt="">`
                     : '<div class="product-card-img-placeholder">🥩</div>';
@@ -150,23 +163,26 @@
                     <div class="card product-card h-100${inCartQty > 0 ? ' in-cart' : ''}">
                         ${img}
                         <div class="card-body p-2">
-                            <div class="product-card-name">${p.name}</div>
+                            <div class="product-card-name"><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>
                             <div class="product-card-price">${formatMoney(parseFloat(p.price))} so'm/${p.unit}</div>
                             <div class="product-card-stock ${stockClass}">${stockText}</div>
-                            ${inCartQty > 0 ? `<div class="product-card-in-cart">Savatda: ${formatStock(inCartQty)} ${p.unit}</div>` : ''}
+                            ${inCartQty > 0 ? `<div class="product-card-in-cart">Savatda: ${formatStock(inCartQty)} ${p.unit} / ${inCartPcs} dona</div>` : ''}
                             <div class="d-flex gap-1 mt-2">
                                 <input type="number" class="form-control form-control-sm catalog-qty" inputmode="decimal" step="0.001" min="0" placeholder="kg">
+                                <input type="number" class="form-control form-control-sm catalog-pieces" inputmode="numeric" step="1" min="0" placeholder="dona">
                                 <button type="button" class="btn btn-sm btn-primary catalog-add">+</button>
                             </div>
                             <div class="small text-danger mt-1 d-none catalog-error"></div>
                         </div>
                     </div>`;
                 const qtyInput = wrap.querySelector('.catalog-qty');
+                const piecesInput = wrap.querySelector('.catalog-pieces');
                 const addBtn = wrap.querySelector('.catalog-add');
                 const errorEl = wrap.querySelector('.catalog-error');
                 function doAdd() {
                     errorEl.classList.add('d-none');
                     const qty = parseFloat(qtyInput.value);
+                    const pieces = parseInt(piecesInput.value, 10) || 0;
                     if (!qty || qty <= 0) {
                         qtyInput.focus();
                         return;
@@ -180,10 +196,20 @@
                         qtyInput.focus();
                         return;
                     }
-                    addToCart(p, qty);
+                    const availPcs = remainingPieces(p);
+                    if (pieces > availPcs) {
+                        errorEl.textContent = `Omborda faqat ${availPcs} dona bor.`;
+                        errorEl.classList.remove('d-none');
+                        piecesInput.focus();
+                        return;
+                    }
+                    addToCart(p, qty, pieces);
                 }
                 addBtn.addEventListener('click', doAdd);
                 qtyInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+                });
+                piecesInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
                 });
                 catalogEl.appendChild(wrap);
@@ -215,10 +241,13 @@
                     ${img}
                     <div class="flex-grow-1">
                         <div class="fw-medium small">${item.name}</div>
-                        <div class="d-flex gap-1 align-items-center mt-1">
+                        <div class="d-flex gap-1 flex-wrap align-items-center mt-1">
                             <input type="number" class="form-control form-control-sm cart-qty" style="width:75px" step="0.001" min="0.001" value="${item.quantity}">
-                            <span class="small text-muted">${item.unit} ×</span>
-                            <input type="number" class="form-control form-control-sm cart-price" style="width:95px" step="0.01" min="0" value="${item.price}">
+                            <span class="small text-muted">${item.unit}</span>
+                            <input type="number" class="form-control form-control-sm cart-pieces" style="width:70px" step="1" min="0" value="${item.pieces}" title="Dona">
+                            <span class="small text-muted">dona ×</span>
+                            <input type="number" class="form-control form-control-sm cart-price" style="width:95px" step="0.01" min="0" value="${item.price}" title="Narx/kg">
+                            <input type="number" class="form-control form-control-sm cart-summa" style="width:105px" step="1" min="0" value="${Math.round(item.quantity * item.price) || ''}" title="Summa">
                         </div>
                     </div>
                     <div class="text-end">
@@ -226,20 +255,37 @@
                         <button type="button" class="row-remove-btn" title="O'chirish">✕</button>
                     </div>`;
                 const qtyEl = row.querySelector('.cart-qty');
+                const piecesEl = row.querySelector('.cart-pieces');
                 const priceEl = row.querySelector('.cart-price');
-                function liveUpdate() {
-                    // Faqat shu qatorning summasini yangilaydi — butun ro'yxatni
-                    // qayta chizmaydi, aks holda inputdagi fokus (va telefonda
-                    // teriladigan raqam) har harfda uzilib qolardi.
-                    item.quantity = parseFloat(qtyEl.value) || 0;
-                    item.price = parseFloat(priceEl.value) || 0;
+                const summaEl = row.querySelector('.cart-summa');
+                function refreshLineDisplay() {
                     const newTotal = Math.max(0, item.quantity * item.price - item.discount);
                     row.querySelector('.line-total').textContent = formatMoney(newTotal);
                     updateGrandTotal();
                     syncHiddenFormset();
                 }
+                function liveUpdate() {
+                    // Faqat shu qatorning summasini yangilaydi — butun ro'yxatni
+                    // qayta chizmaydi, aks holda inputdagi fokus (va telefonda
+                    // teriladigan raqam) har harfda uzilib qolardi.
+                    item.quantity = parseFloat(qtyEl.value) || 0;
+                    item.pieces = parseInt(piecesEl.value, 10) || 0;
+                    item.price = parseFloat(priceEl.value) || 0;
+                    // Miqdor/narx o'zgarganda summa (narx/kg × miqdor) shunga qarab yangilanadi.
+                    summaEl.value = Math.round(item.quantity * item.price) || '';
+                    refreshLineDisplay();
+                }
+                function onSumma() {
+                    const summa = parseFloat(summaEl.value) || 0;
+                    // Summa to'g'ridan-to'g'ri kiritilsa, narx/kg shundan orqaga hisoblanadi.
+                    item.price = item.quantity > 0 ? summa / item.quantity : 0;
+                    priceEl.value = item.price ? Math.round(item.price * 100) / 100 : '';
+                    refreshLineDisplay();
+                }
                 qtyEl.addEventListener('input', liveUpdate);
+                piecesEl.addEventListener('input', liveUpdate);
                 priceEl.addEventListener('input', liveUpdate);
+                summaEl.addEventListener('input', onSumma);
                 // Fokusdan chiqqanda: ombordan ko'p miqdor kiritilgan bo'lsa
                 // qoldiqqa moslashtirish, bo'sh/0 qatorlarni tozalash va
                 // katalogdagi ombor ko'rsatkichini yangilash uchun to'liq
@@ -247,13 +293,19 @@
                 function handleBlur() {
                     const product = products.find((pp) => pp.id === item.productId);
                     const stock = product ? (parseFloat(product.stock) || 0) : Infinity;
+                    const stockPcs = product ? (parseInt(product.stock_pieces, 10) || 0) : Infinity;
                     if (item.quantity > stock) {
                         alert(`Omborda faqat ${formatStock(stock)} ${item.unit} bor. Miqdor shunga moslashtirildi.`);
                         item.quantity = stock;
                     }
+                    if (item.pieces > stockPcs) {
+                        alert(`Omborda faqat ${stockPcs} dona bor. Soni shunga moslashtirildi.`);
+                        item.pieces = stockPcs;
+                    }
                     renderAll();
                 }
                 qtyEl.addEventListener('change', handleBlur);
+                piecesEl.addEventListener('change', handleBlur);
                 priceEl.addEventListener('change', renderAll);
                 row.querySelector('.row-remove-btn').addEventListener('click', () => removeFromCart(index));
                 cartLinesEl.appendChild(row);
@@ -269,6 +321,7 @@
                 wrap.innerHTML = `
                     <input type="hidden" name="items-${i}-product" value="${item.productId}">
                     <input type="hidden" name="items-${i}-quantity" value="${item.quantity}">
+                    <input type="hidden" name="items-${i}-pieces" value="${item.pieces || 0}">
                     <input type="hidden" name="items-${i}-price" value="${item.price}">
                     <input type="hidden" name="items-${i}-discount" value="${item.discount || 0}">`;
                 hiddenItemsEl.appendChild(wrap);

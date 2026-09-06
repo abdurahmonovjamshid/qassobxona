@@ -7,6 +7,12 @@
     <a href="{% url 'expenses:create' %}" class="btn btn-primary">+ Yangi xarajat</a>
 </div>
 
+<div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Kassadagi balans</div><div class="stat-value {% if cash_balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ cash_balance|floatformat:0|intcomma }}</div>
+    </div></div></div>
+</div>
+
 <form method="get" class="row g-2 mb-3">
     <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>
     <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>

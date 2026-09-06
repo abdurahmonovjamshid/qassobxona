@@ -19,8 +19,9 @@ from apps.sales.services import sale_service
 
 
 def _products_json():
-    products = Product.objects.filter(active=True).order_by('name')
+    products = Product.objects.filter(active=True).select_related('category').order_by('name')
     stock_map = inventory_service.get_all_stock()
+    pieces_map = inventory_service.get_all_stock_pieces()
     return json.dumps([
         {
             'id': p.id,
@@ -29,8 +30,9 @@ def _products_json():
             'unit': p.unit,
             'image': p.image.url if p.image else None,
             'stock': str(stock_map.get(p.id, 0)),
-            'category': p.category,
-            'category_label': p.get_category_display(),
+            'stock_pieces': pieces_map.get(p.id, 0),
+            'category': p.category.code,
+            'category_label': p.category.name,
         }
         for p in products
     ])
@@ -57,6 +59,7 @@ def _cart_json_from_formset(formset):
         rows.append({
             'product_id': product_id,
             'quantity': quantity,
+            'pieces': f['pieces'].value() or '0',
             'price': f['price'].value() or '0',
             'discount': f['discount'].value() or '0',
         })
@@ -75,6 +78,7 @@ def _cart_json_from_formset(formset):
             'unit': product.unit,
             'image': product.image.url if product.image else None,
             'quantity': r['quantity'],
+            'pieces': r['pieces'],
             'price': r['price'],
             'discount': r['discount'],
         })
@@ -135,8 +139,9 @@ def sale_create(request):
                         paid_amount = form.cleaned_data.get('paid_amount') or Decimal('0')
                         if paid_amount > 0:
                             payment_service.create_payment(
-                                amount=paid_amount, payment_type='CASH', date=sale.date,
-                                customer=sale.customer, sale=sale, user=request.user,
+                                amount=paid_amount,
+                                payment_type=form.cleaned_data.get('payment_type') or 'CASH',
+                                date=sale.date, customer=sale.customer, sale=sale, user=request.user,
                             )
                     messages.success(request, f"Sotuv {sale.sale_number} muvaffaqiyatli tasdiqlandi.")
                     return redirect('sales:detail', pk=sale.pk)

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Yangi xarid{% endblock %}
 {% block content %}
 <h4 class="mb-3">🐄 Yangi xarid</h4>
 
-<form method="post" novalidate>
+<form method="post" novalidate id="purchase-form">
     {% csrf_token %}
     {% if form.non_field_errors %}
         <div class="alert alert-danger">{{ form.non_field_errors }}</div>
@@ -15,57 +16,94 @@
                 {{ form.supplier }}{{ form.supplier.errors }}
             </div>
             <div class="col-md-4">
-                <label class="form-label">Ombor mahsuloti (masalan: Mol butun)</label>
-                <div class="picker" data-picker="product">
-                    <input type="text" class="form-control picker-search" autocomplete="off">
-                    <div class="picker-results" style="display:none;"></div>
-                    <div class="picker-selected d-flex align-items-center gap-2 mt-1"></div>
-                    {{ form.product }}
-                </div>
-                {{ form.product.errors }}
-            </div>
-            <div class="col-md-4">
                 <label class="form-label">Sana</label>
                 {{ form.date }}{{ form.date.errors }}
             </div>
             <div class="col-md-3">
-                <label class="form-label">Hayvon turi</label>
-                {{ form.animal_type }}{{ form.animal_type.errors }}
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Brutto vazn (kg)</label>
-                {{ form.gross_weight }}{{ form.gross_weight.errors }}
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Netto vazn (kg)</label>
-                {{ form.net_weight }}{{ form.net_weight.errors }}
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Narx / kg (so'm)</label>
-                {{ form.price_per_kg }}{{ form.price_per_kg.errors }}
-            </div>
-            <div class="col-md-4">
                 <label class="form-label">{{ form.paid_amount.label }}</label>
                 {{ form.paid_amount }}
             </div>
-            <div class="col-md-8">
+            <div class="col-md-1">
+                <label class="form-label">{{ form.payment_type.label }}</label>
+                {{ form.payment_type }}
+            </div>
+            <div class="col-md-12">
                 <label class="form-label">Izoh</label>
                 {{ form.notes }}
             </div>
         </div>
     </div>
 
-    {{ formset.management_form }}
+    {{ item_formset.management_form }}
+    {% if item_formset.non_form_errors %}
+        <div class="alert alert-danger">{{ item_formset.non_form_errors }}</div>
+    {% endif %}
+    <div id="hidden-items" class="d-none"></div>
+
+    <div class="card table-card mb-3">
+        <div class="card-header bg-white">
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <input type="text" id="catalog-search" class="form-control flex-grow-1" style="min-width:160px" placeholder="🔍 Mahsulot qidirish...">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        Kategoriya
+                    </button>
+                    <div class="dropdown-menu p-2 category-dropdown-menu">
+                        <input type="text" id="category-search" class="form-control form-control-sm mb-2" placeholder="Kategoriya qidirish...">
+                        <div id="category-checklist"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-2" id="product-catalog"></div>
+            <div id="catalog-empty" class="text-center text-muted py-4 d-none">Mahsulot topilmadi.</div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="cartOffcanvas" style="height: 85vh;">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">🛒 Tanlangan mahsulotlar</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Yopish"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column">
+            <div id="cart-lines" class="flex-grow-1 overflow-auto"></div>
+            <div id="cart-empty" class="text-center text-muted py-4">Hali mahsulot tanlanmagan. Katalogdan tanlang.</div>
+            <div class="border-top pt-3 mt-2">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-semibold">Mahsulotlar summasi:</span>
+                    <span class="grand-total-box" id="items-total">0 so'm</span>
+                </div>
+                <button type="button" class="btn btn-outline-primary w-100" data-bs-dismiss="offcanvas">Qo'shimcha xarajatlarga o'tish</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart-bar" id="cart-bar">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span id="cart-bar-count" class="fw-semibold">0 mahsulot</span>
+                <span class="text-muted small"> · Jami: <span id="cart-bar-total">0</span> so'm</span>
+            </div>
+            <button type="button" class="btn btn-success" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+                Tanlanganlar 🛒
+            </button>
+        </div>
+    </div>
+    <div class="cart-bar-spacer"></div>
+
+    {{ expense_formset.management_form }}
     <div class="card table-card mb-3">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <span>Qo'shimcha xarajatlar (transport, yuklash...)</span>
+            <span>Qo'shimcha xarajatlar (transport, yuklash...) — netto vazn (kg) bo'yicha taqsimlanadi</span>
             <button type="button" class="btn btn-sm btn-outline-primary" id="add-expense-rows">+ Qo'shish</button>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead><tr><th>Turi</th><th>Summa</th><th>Izoh</th><th></th></tr></thead>
                 <tbody id="expense-rows">
-                {% for exp_form in formset %}
+                {% for exp_form in expense_formset %}
                     <tr class="formset-row">
                         <td>{{ exp_form.id }}{{ exp_form.expense_type }}</td>
                         <td>{{ exp_form.amount }}</td>
@@ -84,8 +122,8 @@
         <div class="card-body">
             <div class="row g-3 text-end">
                 <div class="col-md-4">
-                    <div class="stat-label">Xarid summasi (netto × narx)</div>
-                    <div class="fs-5 fw-semibold" id="purchase-amount-total">0 so'm</div>
+                    <div class="stat-label">Mahsulotlar summasi (netto × narx)</div>
+                    <div class="fs-5 fw-semibold" id="items-total-2">0 so'm</div>
                 </div>
                 <div class="col-md-4">
                     <div class="stat-label">Qo'shimcha xarajatlar jami</div>
@@ -107,9 +145,9 @@
 <template id="expense-empty-form">
 <table><tbody>
     <tr class="formset-row">
-        <td>{{ formset.empty_form.id }}{{ formset.empty_form.expense_type }}</td>
-        <td>{{ formset.empty_form.amount }}</td>
-        <td>{{ formset.empty_form.notes }}</td>
+        <td>{{ expense_formset.empty_form.id }}{{ expense_formset.empty_form.expense_type }}</td>
+        <td>{{ expense_formset.empty_form.amount }}</td>
+        <td>{{ expense_formset.empty_form.notes }}</td>
         <td class="text-center">
             <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
         </td>
@@ -125,7 +163,11 @@
 <script src="{% static 'js/purchase_form.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        window.PurchaseFormInit({{ products_json|safe }}, '{{ formset.prefix }}');
+        window.PurchaseFormInit({
+            products: {{ products_json|safe }},
+            initialCart: {{ initial_cart_json|safe }},
+            expenseFormsetPrefix: '{{ expense_formset.prefix }}',
+        });
     });
 </script>
 {% endblock %}

@@ -7,8 +7,11 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.butchering.forms import ButcheringForm, ButcheringOutputFormSet
-from apps.butchering.models import Butchering
+from apps.butchering.forms import (
+    ButcheringExpenseFormSet, ButcheringForm, ButcheringOutputFormSet,
+    ButcheringSpecificationForm, ButcheringSpecificationItemFormSet,
+)
+from apps.butchering.models import Butchering, ButcheringSpecification
 from apps.butchering.services import butchering_service
 from apps.common.date_filters import get_date_range
 from apps.products.models import Product
@@ -23,13 +26,28 @@ def _products_json():
     ])
 
 
+def _specifications_json():
+    specs = ButcheringSpecification.objects.filter(active=True).prefetch_related('items')
+    return json.dumps([
+        {
+            'id': s.id,
+            'name': s.name,
+            'parent_product_id': s.parent_product_id,
+            'items': [{'child_product_id': item.child_product_id} for item in s.items.all()],
+        }
+        for s in specs
+    ])
+
+
 def _purchases_json():
-    purchases = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).select_related('product')
+    purchases = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).prefetch_related('items')
     return json.dumps([
         {
             'id': p.id,
-            'product_id': p.product_id,
-            'net_weight': str(p.net_weight),
+            'items': [
+                {'product_id': item.product_id, 'net_weight': str(item.net_weight), 'pieces': item.pieces}
+                for item in p.items.all()
+            ],
         }
         for p in purchases
     ])
@@ -60,14 +78,17 @@ def butchering_create(request):
         form = ButcheringForm(request.POST)
         if form.is_valid():
             butchering = form.save(commit=False)
-            formset = ButcheringOutputFormSet(request.POST, instance=butchering)
-            if formset.is_valid():
+            formset = ButcheringOutputFormSet(request.POST, instance=butchering, prefix='outputs')
+            expense_formset = ButcheringExpenseFormSet(request.POST, instance=butchering, prefix='expenses')
+            if formset.is_valid() and expense_formset.is_valid():
                 try:
                     with transaction.atomic():
                         butchering.status = Butchering.Status.DRAFT
                         butchering.save()
                         formset.instance = butchering
                         formset.save()
+                        expense_formset.instance = butchering
+                        expense_formset.save()
 
                         butchering_service.confirm_butchering(butchering, user=request.user)
                     messages.success(request, "Bo'laklash muvaffaqiyatli tasdiqlandi.")
@@ -75,23 +96,28 @@ def butchering_create(request):
                 except ValidationError as exc:
                     messages.error(request, '; '.join(exc.messages))
         else:
-            formset = ButcheringOutputFormSet(request.POST)
+            formset = ButcheringOutputFormSet(request.POST, prefix='outputs')
+            expense_formset = ButcheringExpenseFormSet(request.POST, prefix='expenses')
     else:
         initial = {'date': timezone.localdate()}
         purchase_id = request.GET.get('purchase')
         if purchase_id:
             initial['purchase'] = purchase_id
-            purchase = Purchase.objects.filter(pk=purchase_id).first()
-            if purchase and purchase.product_id:
-                initial['input_product'] = purchase.product_id
-                initial['input_weight'] = purchase.net_weight
+            purchase = Purchase.objects.filter(pk=purchase_id).prefetch_related('items').first()
+            if purchase:
+                items = list(purchase.items.all())
+                if len(items) == 1:
+                    initial['input_product'] = items[0].product_id
+                    initial['input_weight'] = items[0].net_weight
         form = ButcheringForm(initial=initial)
-        formset = ButcheringOutputFormSet()
+        formset = ButcheringOutputFormSet(prefix='outputs')
+        expense_formset = ButcheringExpenseFormSet(prefix='expenses')
 
     return render(request, 'butchering/form.html', {
-        'form': form, 'formset': formset,
+        'form': form, 'formset': formset, 'expense_formset': expense_formset,
         'products_json': _products_json(),
         'purchases_json': _purchases_json(),
+        'specifications_json': _specifications_json(),
     })
 
 
@@ -102,6 +128,7 @@ def butchering_detail(request, pk):
     return render(request, 'butchering/detail.html', {
         'butchering': butchering,
         'outputs': butchering.outputs.select_related('product').all(),
+        'expenses': butchering.extra_expenses.all(),
     })
 
 
@@ -115,3 +142,42 @@ def butchering_cancel(request, pk):
         except ValidationError as exc:
             messages.error(request, '; '.join(exc.messages))
     return redirect('butchering:detail', pk=pk)
+
+
+@login_required
+def specification_list(request):
+    specs = ButcheringSpecification.objects.select_related('parent_product').prefetch_related('items__child_product')
+    product_id = request.GET.get('product')
+    if product_id:
+        specs = specs.filter(parent_product_id=product_id)
+    return render(request, 'butchering/specification_list.html', {
+        'specs': specs,
+        'products': Product.objects.filter(active=True),
+    })
+
+
+@login_required
+def specification_create(request):
+    if request.method == 'POST':
+        form = ButcheringSpecificationForm(request.POST)
+        if form.is_valid():
+            spec = form.save(commit=False)
+            formset = ButcheringSpecificationItemFormSet(request.POST, instance=spec)
+            if formset.is_valid():
+                with transaction.atomic():
+                    spec.save()
+                    formset.instance = spec
+                    formset.save()
+                messages.success(request, f"'{spec.name}' spetsifikatsiyasi qo'shildi.")
+                return redirect('butchering:specification_list')
+        else:
+            formset = ButcheringSpecificationItemFormSet(request.POST)
+    else:
+        initial = {}
+        product_id = request.GET.get('product')
+        if product_id:
+            initial['parent_product'] = product_id
+        form = ButcheringSpecificationForm(initial=initial)
+        formset = ButcheringSpecificationItemFormSet()
+
+    return render(request, 'butchering/specification_form.html', {'form': form, 'formset': formset})

@@ -1,7 +1,14 @@
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+import json
 
-from apps.inventory.models import StockMovement
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from apps.inventory.forms import InventoryCountForm, InventoryCountItemFormSet
+from apps.inventory.models import InventoryCount, StockMovement
 from apps.inventory.services import inventory_service
 from apps.products.models import Product
 
@@ -9,11 +16,12 @@ from apps.products.models import Product
 @login_required
 def inventory_list(request):
     stock_rows = []
-    for product in Product.objects.filter(active=True):
+    for product in Product.objects.filter(active=True).select_related('category'):
         qty = inventory_service.get_stock(product)
         stock_rows.append({
             'product': product,
             'quantity': qty,
+            'pieces': inventory_service.get_stock_pieces(product),
             'avg_cost': inventory_service.get_weighted_average_cost(product),
         })
     stock_rows.sort(key=lambda r: r['product'].name)
@@ -31,4 +39,56 @@ def inventory_list(request):
         'movements': movements[:200],
         'products': Product.objects.filter(active=True),
         'movement_types': StockMovement.MovementType.choices,
+    })
+
+
+@login_required
+def inventory_count_list(request):
+    counts = InventoryCount.objects.all()
+    return render(request, 'inventory/count_list.html', {'counts': counts[:200]})
+
+
+@login_required
+def inventory_count_create(request):
+    if request.method == 'POST':
+        form = InventoryCountForm(request.POST)
+        if form.is_valid():
+            count = form.save(commit=False)
+            formset = InventoryCountItemFormSet(request.POST, instance=count)
+            if formset.is_valid():
+                try:
+                    with transaction.atomic():
+                        count.status = InventoryCount.Status.DRAFT
+                        count.created_by = request.user
+                        count.save()
+                        formset.instance = count
+                        formset.save()
+                        inventory_service.confirm_inventory_count(count, user=request.user)
+                    messages.success(request, "Inventarizatsiya muvaffaqiyatli tasdiqlandi.")
+                    return redirect('inventory:count_detail', pk=count.pk)
+                except ValidationError as exc:
+                    messages.error(request, '; '.join(exc.messages))
+        else:
+            formset = InventoryCountItemFormSet(request.POST)
+    else:
+        form = InventoryCountForm(initial={'date': timezone.localdate()})
+        formset = InventoryCountItemFormSet()
+
+    stock_map = inventory_service.get_all_stock()
+    pieces_map = inventory_service.get_all_stock_pieces()
+    products_json = json.dumps([
+        {'id': p.id, 'name': p.name, 'stock': str(stock_map.get(p.id, 0)), 'stock_pieces': pieces_map.get(p.id, 0)}
+        for p in Product.objects.filter(active=True).order_by('name')
+    ])
+    return render(request, 'inventory/count_form.html', {
+        'form': form, 'formset': formset, 'products_json': products_json,
+    })
+
+
+@login_required
+def inventory_count_detail(request, pk):
+    count = get_object_or_404(InventoryCount, pk=pk)
+    return render(request, 'inventory/count_detail.html', {
+        'count': count,
+        'items': count.items.select_related('product').all(),
     })

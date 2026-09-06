@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
 
+from apps.common.allocation import allocate_proportionally
 from apps.inventory.models import StockMovement
 from apps.inventory.services import inventory_service
 from apps.purchases.models import Purchase
@@ -16,27 +17,45 @@ def _reference(purchase: Purchase) -> str:
 
 @transaction.atomic
 def confirm_purchase(purchase: Purchase, *, user=None) -> Purchase:
-    """Xaridni tasdiqlaydi va mahsulotni omborga kirim qiladi."""
+    """Xaridni tasdiqlaydi: har bir mahsulot (item) omborga kirim qilinadi,
+    qo'shimcha xarajatlar (transport va h.k.) item'lar orasida NETTO VAZN (kg)
+    ulushi bo'yicha taqsimlanib, yakuniy tannarxga (landed cost) qo'shiladi."""
     if purchase.status != Purchase.Status.DRAFT:
         raise ValidationError('Faqat DRAFT holatidagi xaridni tasdiqlash mumkin.')
-    if not purchase.product_id:
-        raise ValidationError(
-            'Xaridni tasdiqlash uchun avval "Mahsulot" (product) maydonini tanlang '
-            '(masalan: "Mol (butun)") — shu mahsulot omborga kirim qilinadi.'
+
+    items = list(purchase.items.select_related('product').all())
+    if not items:
+        raise ValidationError('Xaridda kamida bitta mahsulot bolishi kerak.')
+
+    reference = _reference(purchase)
+    total_expenses = purchase.extra_expenses.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+    allocated_expenses = allocate_proportionally(total_expenses, items, lambda i: i.net_weight)
+
+    total = Decimal('0')
+    for item in items:
+        allocated = allocated_expenses.get(item, Decimal('0'))
+        expense_per_kg = (allocated / item.net_weight) if item.net_weight else Decimal('0')
+        landed_unit_cost = (item.price_per_kg + expense_per_kg).quantize(Decimal('0.01'))
+
+        item.total = (item.net_weight * item.price_per_kg).quantize(Decimal('0.01'))
+        item.landed_unit_cost = landed_unit_cost
+        item.save(update_fields=['total', 'landed_unit_cost'])
+
+        inventory_service.stock_in(
+            product=item.product,
+            quantity=item.net_weight,
+            pieces=item.pieces,
+            movement_type=StockMovement.MovementType.PURCHASE,
+            unit_cost=landed_unit_cost,
+            reference=reference,
+            date=purchase.date,
+            created_by=user,
         )
+        total += item.total
 
-    inventory_service.stock_in(
-        product=purchase.product,
-        quantity=purchase.net_weight,
-        movement_type=StockMovement.MovementType.PURCHASE,
-        unit_cost=purchase.price_per_kg,
-        reference=_reference(purchase),
-        date=purchase.date,
-        created_by=user,
-    )
-
+    purchase.total_amount = total
     purchase.status = Purchase.Status.CONFIRMED
-    purchase.save(update_fields=['status', 'updated_at'])
+    purchase.save()
     return purchase
 
 

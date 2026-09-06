@@ -30,7 +30,6 @@ def purchase_report_view(request):
         date_from=request.GET.get('date_from') or None,
         date_to=request.GET.get('date_to') or None,
         supplier_id=request.GET.get('supplier') or None,
-        animal_type=request.GET.get('animal_type') or None,
     )
     data.update({'suppliers': Supplier.objects.all()})
     return render(request, 'reports/purchases.html', data)

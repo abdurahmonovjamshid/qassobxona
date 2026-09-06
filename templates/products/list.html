@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Mahsulotlar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Mahsulotlar</h4>
+    <div>
+        <a href="{% url 'products:category_list' %}" class="btn btn-outline-secondary">Kategoriyalar</a>
+        <a href="{% url 'products:create' %}" class="btn btn-primary">+ Yangi mahsulot</a>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto"><input type="text" name="q" class="form-control" placeholder="Nomi bo'yicha qidirish" value="{{ request.GET.q }}"></div>
+    <div class="col-12 col-md-auto">
+        <select name="category" class="form-select">
+            <option value="">Barcha kategoriyalar</option>
+            {% for c in categories %}
+                <option value="{{ c.pk }}" {% if request.GET.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Qidirish</button></div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>Rasm</th><th>Nomi</th><th>Kod</th><th>Kategoriya</th><th class="text-end">Sotuv narxi</th><th class="text-end">Qoldiq (kg)</th><th>Holat</th><th></th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{% if row.product.image %}<img src="{{ row.product.image.url }}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;">{% else %}—{% endif %}</td>
+                    <td><a href="{% url 'products:detail' row.product.pk %}">{{ row.product.name }}</a></td>
+                    <td>{{ row.product.code }}</td>
+                    <td>{{ row.product.category.name }}</td>
+                    <td class="text-end">{{ row.product.sale_price|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ row.stock|floatformat:3 }}</td>
+                    <td>{% if row.product.active %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Nofaol</span>{% endif %}</td>
+                    <td><a href="{% url 'products:update' row.product.pk %}" class="btn btn-sm btn-outline-secondary">Tahrirlash</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">Mahsulot topilmadi.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

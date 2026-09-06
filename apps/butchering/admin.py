@@ -1,8 +1,26 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 
-from .models import Butchering, ButcheringOutput
+from .models import (
+    Butchering, ButcheringExpense, ButcheringOutput,
+    ButcheringSpecification, ButcheringSpecificationItem,
+)
 from .services import butchering_service
+
+
+class ButcheringSpecificationItemInline(admin.TabularInline):
+    model = ButcheringSpecificationItem
+    extra = 1
+    autocomplete_fields = ('child_product',)
+
+
+@admin.register(ButcheringSpecification)
+class ButcheringSpecificationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'parent_product', 'active')
+    list_filter = ('active',)
+    search_fields = ('name', 'parent_product__name')
+    autocomplete_fields = ('parent_product',)
+    inlines = (ButcheringSpecificationItemInline,)
 
 
 class ButcheringOutputInline(admin.TabularInline):
@@ -10,6 +28,11 @@ class ButcheringOutputInline(admin.TabularInline):
     extra = 1
     autocomplete_fields = ('product',)
     readonly_fields = ('unit_cost',)
+
+
+class ButcheringExpenseInline(admin.TabularInline):
+    model = ButcheringExpense
+    extra = 1
 
 
 @admin.register(Butchering)
@@ -27,7 +50,7 @@ class ButcheringAdmin(admin.ModelAdmin):
     )
     date_hierarchy = 'date'
     ordering = ('-date', '-id')
-    inlines = (ButcheringOutputInline,)
+    inlines = (ButcheringOutputInline, ButcheringExpenseInline)
     actions = ('confirm_butcherings', 'cancel_butcherings')
 
     def save_model(self, request, obj, form, change):

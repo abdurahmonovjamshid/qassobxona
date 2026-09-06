@@ -103,6 +103,8 @@ ENV/
 
 .DS_Store
 *.sqlite3
+*.sqlite3.bak
+*.bak
 media/
 *.pyc
 *.db

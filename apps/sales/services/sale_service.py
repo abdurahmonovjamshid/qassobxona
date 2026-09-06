@@ -41,6 +41,7 @@ def confirm_sale(sale: Sale, *, user=None) -> Sale:
         inventory_service.stock_out(
             product=item.product,
             quantity=item.quantity,
+            pieces=item.pieces,
             movement_type=StockMovement.MovementType.SALE,
             unit_cost=cost_price,
             reference=reference,

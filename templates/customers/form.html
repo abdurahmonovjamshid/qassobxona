@@ -1,14 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Yangi mijoz{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block content %}
-<h4 class="mb-3">Yangi mijoz</h4>
-<form method="post" class="card table-card p-4" style="max-width: 500px;">
+<h4 class="mb-3">{{ title }}</h4>
+<form method="post" class="card table-card p-4" style="max-width: 560px;">
     {% csrf_token %}
     <div class="mb-3"><label class="form-label">Ism</label>{{ form.name }}{{ form.name.errors }}</div>
     <div class="mb-3"><label class="form-label">Telefon</label>{{ form.phone }}</div>
     <div class="mb-3"><label class="form-label">Manzil</label>{{ form.address }}</div>
     <div class="mb-3"><label class="form-label">Kredit limit</label>{{ form.credit_limit }}</div>
+    <div class="mb-3"><label class="form-label">Boshlang'ich saldo</label>{{ form.opening_balance }}{{ form.opening_balance.errors }}</div>
     <div class="mb-3"><label class="form-label">Izoh</label>{{ form.notes }}</div>
+    <hr>
+    <div class="form-check mb-2">{{ form.is_supplier }}<label class="form-check-label">Bu mijoz yetkazib beruvchi ham</label></div>
+    <div class="mb-3">
+        <label class="form-label">{{ form.link_existing_supplier.label }}</label>
+        {{ form.link_existing_supplier }}
+        <div class="form-text">{{ form.link_existing_supplier.help_text }}</div>
+    </div>
     <div class="form-check mb-3">{{ form.active }}<label class="form-check-label">Faol</label></div>
     <button type="submit" class="btn btn-primary">Saqlash</button>
 </form>

@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from apps.expenses.models import Expense
 from apps.inventory.services import inventory_service
+from apps.kassa.services import cash_service
 from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.purchases.models import Purchase
@@ -66,6 +67,26 @@ def index(request):
     top_products_labels = [row['product__name'] for row in top_products_qs]
     top_products_values = [float(row['total_qty']) for row in top_products_qs]
 
+    top_customers_qs = (
+        Sale.objects.filter(status=Sale.Status.CONFIRMED, date__month=today.month, date__year=today.year)
+        .values('customer__name')
+        .annotate(total=Sum('total_amount'))
+        .order_by('-total')[:10]
+    )
+    top_customers_labels = [row['customer__name'] for row in top_customers_qs]
+    top_customers_values = [float(row['total']) for row in top_customers_qs]
+
+    top_suppliers_qs = (
+        Purchase.objects.filter(status=Purchase.Status.CONFIRMED, date__month=today.month, date__year=today.year)
+        .values('supplier__name')
+        .annotate(total=Sum('total_amount'))
+        .order_by('-total')[:10]
+    )
+    top_suppliers_labels = [row['supplier__name'] for row in top_suppliers_qs]
+    top_suppliers_values = [float(row['total']) for row in top_suppliers_qs]
+
+    kassa_balance = cash_service.get_balance()
+
     context = {
         'today': today,
         'today_sales_count': today_sales_count,
@@ -85,5 +106,10 @@ def index(request):
         'top_products_labels': json.dumps(top_products_labels),
         'top_products_values': json.dumps(top_products_values),
         'debitor_creditor_values': json.dumps([float(debitor_total), float(creditor_total)]),
+        'kassa_balance': kassa_balance,
+        'top_customers_labels': json.dumps(top_customers_labels),
+        'top_customers_values': json.dumps(top_customers_values),
+        'top_suppliers_labels': json.dumps(top_suppliers_labels),
+        'top_suppliers_values': json.dumps(top_suppliers_values),
     }
     return render(request, 'dashboard/index.html', context)

@@ -4,9 +4,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_date
 
+from apps.common.date_filters import get_date_range
+from apps.common.excel_export import statement_to_response
 from apps.customers.forms import CustomerForm
 from apps.customers.models import Customer
+from apps.reports.services import statement_service
 from apps.sales.models import Sale
 
 
@@ -38,7 +42,22 @@ def customer_create(request):
             return redirect('customers:detail', pk=customer.pk)
     else:
         form = CustomerForm()
-    return render(request, 'customers/form.html', {'form': form})
+    return render(request, 'customers/form.html', {'form': form, 'title': 'Yangi mijoz'})
+
+
+@login_required
+def customer_update(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{customer.name} yangilandi.")
+            return redirect('customers:detail', pk=customer.pk)
+    else:
+        initial = {'link_existing_supplier': customer.linked_supplier_id}
+        form = CustomerForm(instance=customer, initial=initial)
+    return render(request, 'customers/form.html', {'form': form, 'title': customer.name, 'customer': customer})
 
 
 @login_required
@@ -66,3 +85,33 @@ def customer_detail(request, pk):
         'history': history,
         'sales': sales,
     })
+
+
+@login_required
+def customer_statement(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    date_from, date_to = get_date_range(request)
+    statement = statement_service.build_partner_statement(
+        customer, date_from=parse_date(date_from) if date_from else None,
+        date_to=parse_date(date_to) if date_to else None,
+    )
+    return render(request, 'customers/statement.html', {
+        'customer': customer,
+        'statement': statement,
+        'date_from': date_from,
+        'date_to': date_to,
+    })
+
+
+@login_required
+def customer_statement_export(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    date_from, date_to = get_date_range(request)
+    statement = statement_service.build_partner_statement(
+        customer, date_from=parse_date(date_from) if date_from else None,
+        date_to=parse_date(date_to) if date_to else None,
+    )
+    sections = [('Mijoz (sotuv)', statement['customer_statement'])]
+    if statement['supplier_statement']:
+        sections.append(('Yetkazib beruvchi (xarid)', statement['supplier_statement']))
+    return statement_to_response(filename=f'akt-sverka-{customer.name}.xlsx', sections=sections)

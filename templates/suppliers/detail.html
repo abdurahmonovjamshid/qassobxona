@@ -7,6 +7,8 @@
     <div>
         <a href="{% url 'payments:create' %}?supplier={{ supplier.pk }}" class="btn btn-outline-primary">+ To'lov</a>
         <a href="{% url 'purchases:create' %}" class="btn btn-outline-success">+ Xarid</a>
+        <a href="{% url 'suppliers:statement' supplier.pk %}" class="btn btn-outline-info">Akt-sverka</a>
+        <a href="{% url 'suppliers:update' supplier.pk %}" class="btn btn-outline-secondary">Tahrirlash</a>
         <a href="{% url 'suppliers:list' %}" class="btn btn-outline-secondary">Ortga</a>
     </div>
 </div>

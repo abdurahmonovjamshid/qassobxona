@@ -3,7 +3,14 @@ from django.utils.html import format_html
 
 from apps.inventory.services import inventory_service
 
-from .models import Product
+from .models import Product, ProductCategory
+
+
+@admin.register(ProductCategory)
+class ProductCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'active')
+    search_fields = ('name', 'code')
+    ordering = ('name',)
 
 
 @admin.register(Product)

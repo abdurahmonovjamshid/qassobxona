@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Yangi spetsifikatsiya{% endblock %}
+{% block content %}
+<h4 class="mb-3">Yangi bo'laklash spetsifikatsiyasi</h4>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="card table-card mb-3">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Bo'laklanadigan mahsulot (father)</label>
+                {{ form.parent_product }}{{ form.parent_product.errors }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Usul nomi</label>
+                {{ form.name }}{{ form.name.errors }}
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check">{{ form.active }}<label class="form-check-label">Faol</label></div>
+            </div>
+        </div>
+    </div>
+
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+    {% endif %}
+    <div class="card table-card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span>Chiqish mahsulotlari (child)</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-spec-item-rows">+ Qo'shish</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Mahsulot</th><th>Tartib</th><th></th></tr></thead>
+                <tbody id="spec-item-rows">
+                {% for item_form in formset %}
+                    <tr class="formset-row">
+                        <td>{{ item_form.id }}{{ item_form.child_product }}{{ item_form.child_product.errors }}</td>
+                        <td>{{ item_form.order }}</td>
+                        <td class="text-center">
+                            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-success btn-lg">SAQLASH</button>
+    </div>
+</form>
+
+<template id="spec-item-empty-form">
+<table><tbody>
+    <tr class="formset-row">
+        <td>{{ formset.empty_form.id }}{{ formset.empty_form.child_product }}</td>
+        <td>{{ formset.empty_form.order }}</td>
+        <td class="text-center">
+            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+        </td>
+    </tr>
+</tbody></table>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/formset.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initFormset({
+            containerId: 'spec-item-rows',
+            prefix: '{{ formset.prefix }}',
+            templateId: 'spec-item-empty-form',
+        });
+    });
+</script>
+{% endblock %}

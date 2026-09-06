@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Yangi kategoriya{% endblock %}
+{% block content %}
+<h4 class="mb-3">Yangi kategoriya</h4>
+<form method="post" class="card table-card p-4" style="max-width: 480px;">
+    {% csrf_token %}
+    <div class="mb-3"><label class="form-label">Nomi</label>{{ form.name }}{{ form.name.errors }}</div>
+    <div class="mb-3"><label class="form-label">Kod</label>{{ form.code }}{{ form.code.errors }}</div>
+    <div class="form-check mb-3">{{ form.active }}<label class="form-check-label">Faol</label></div>
+    <div>
+        <button type="submit" class="btn btn-primary">Saqlash</button>
+        <a href="{% url 'products:category_list' %}" class="btn btn-outline-secondary">Bekor qilish</a>
+    </div>
+</form>
+{% endblock %}

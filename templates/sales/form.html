@@ -25,7 +25,7 @@
                 {{ form.date }}
                 {{ form.date.errors }}
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <label class="form-label d-flex justify-content-between align-items-center flex-wrap gap-1">
                     <span>{{ form.paid_amount.label }}</span>
                     <span class="btn-group btn-group-sm" role="group">
@@ -34,6 +34,10 @@
                     </span>
                 </label>
                 {{ form.paid_amount }}
+            </div>
+            <div class="col-6 col-md-1">
+                <label class="form-label">{{ form.payment_type.label }}</label>
+                {{ form.payment_type }}
             </div>
         </div>
     </div>

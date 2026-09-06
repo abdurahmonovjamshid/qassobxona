@@ -3,8 +3,9 @@ from decimal import Decimal
 from django import forms
 from django.forms import inlineformset_factory
 
+from apps.payments.models import Payment
 from apps.products.models import Product
-from apps.purchases.models import Purchase, PurchaseExpense
+from apps.purchases.models import Purchase, PurchaseExpense, PurchaseItem
 from apps.suppliers.models import Supplier
 
 
@@ -14,26 +15,51 @@ class PurchaseForm(forms.ModelForm):
         initial=Decimal('0'), label="Boshlang'ich to'lov",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
     )
+    payment_type = forms.ChoiceField(
+        choices=Payment.PaymentType.choices, required=False, initial=Payment.PaymentType.CASH,
+        label="To'lov turi", widget=forms.Select(attrs={'class': 'form-select'}),
+    )
 
     class Meta:
         model = Purchase
-        fields = ['supplier', 'product', 'date', 'animal_type', 'gross_weight', 'net_weight', 'price_per_kg', 'notes']
+        fields = ['supplier', 'date', 'notes']
         widgets = {
             'supplier': forms.Select(attrs={'class': 'form-select'}),
-            'product': forms.Select(attrs={'class': 'form-select d-none', 'data-role': 'product-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'animal_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Mol, Qoy...'}),
-            'gross_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0'}),
-            'net_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0', 'data-role': 'net-weight'}),
-            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'data-role': 'price-per-kg'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['supplier'].queryset = Supplier.objects.filter(active=True)
-        self.fields['product'].queryset = Product.objects.filter(active=True)
         self.fields['notes'].required = False
+
+
+class PurchaseItemForm(forms.ModelForm):
+    class Meta:
+        model = PurchaseItem
+        fields = ['product', 'net_weight', 'pieces', 'price_per_kg']
+        widgets = {
+            'product': forms.Select(attrs={'class': 'form-select', 'data-role': 'item-product'}),
+            'net_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0', 'data-role': 'item-net-weight'}),
+            'pieces': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0', 'data-role': 'item-pieces'}),
+            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'data-role': 'item-price'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['product'].queryset = Product.objects.filter(active=True)
+        self.fields['pieces'].required = False
+        self.fields['pieces'].initial = None
+
+    def clean_pieces(self):
+        return self.cleaned_data.get('pieces') or 0
+
+
+PurchaseItemFormSet = inlineformset_factory(
+    Purchase, PurchaseItem, form=PurchaseItemForm,
+    extra=3, can_delete=True, min_num=1, validate_min=True,
+)
 
 
 class PurchaseExpenseForm(forms.ModelForm):

@@ -4,8 +4,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.dateparse import parse_date
 
+from apps.common.date_filters import get_date_range
+from apps.common.excel_export import statement_to_response
 from apps.purchases.models import Purchase
+from apps.reports.services import statement_service
 from apps.suppliers.forms import SupplierForm
 from apps.suppliers.models import Supplier
 
@@ -38,7 +42,51 @@ def supplier_create(request):
             return redirect('suppliers:detail', pk=supplier.pk)
     else:
         form = SupplierForm()
-    return render(request, 'suppliers/form.html', {'form': form})
+    return render(request, 'suppliers/form.html', {'form': form, 'title': 'Yangi yetkazib beruvchi'})
+
+
+@login_required
+def supplier_update(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk)
+    if request.method == 'POST':
+        form = SupplierForm(request.POST, instance=supplier)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{supplier.name} yangilandi.")
+            return redirect('suppliers:detail', pk=supplier.pk)
+    else:
+        form = SupplierForm(instance=supplier)
+    return render(request, 'suppliers/form.html', {'form': form, 'title': supplier.name})
+
+
+@login_required
+def supplier_statement(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk)
+    date_from, date_to = get_date_range(request)
+    statement = statement_service.build_supplier_statement(
+        supplier, date_from=parse_date(date_from) if date_from else None,
+        date_to=parse_date(date_to) if date_to else None,
+    )
+    return render(request, 'suppliers/statement.html', {
+        'supplier': supplier,
+        'statement': statement,
+        'date_from': date_from,
+        'date_to': date_to,
+    })
+
+
+@login_required
+def supplier_statement_export(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk)
+    date_from, date_to = get_date_range(request)
+    statement = statement_service.build_supplier_statement(
+        supplier, date_from=parse_date(date_from) if date_from else None,
+        date_to=parse_date(date_to) if date_to else None,
+    )
+    return statement_to_response(
+        filename=f'akt-sverka-{supplier.name}.xlsx',
+        sections=[('Yetkazib beruvchi (xarid)', statement)],
+    )
 
 
 @login_required

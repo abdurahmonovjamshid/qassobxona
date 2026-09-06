@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Yangi bo'laklash{% endblock %}
 {% block content %}
-<h4 class="mb-3">🔪 Yangi bo'laklash</h4>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">🔪 Yangi bo'laklash</h4>
+    <a href="{% url 'butchering:specification_list' %}" class="btn btn-outline-secondary">Spetsifikatsiyalar</a>
+</div>
 
 <div class="card table-card mb-3">
     <div class="card-body d-flex align-items-center gap-3 flex-wrap">
@@ -29,9 +32,15 @@
                 {{ form.purchase }}{{ form.purchase.errors }}
                 <div class="form-text">Xaridni tanlasangiz, mahsulot va vazn avtomatik to'ldiriladi.</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Input mahsulot</label>
                 {{ form.input_product }}{{ form.input_product.errors }}
+                <div class="form-text">Faqat spetsifikatsiyasi mavjud mahsulotlar ko'rsatiladi.</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Bo'laklash usuli (spetsifikatsiya)</label>
+                {{ form.specification }}{{ form.specification.errors }}
+                <div class="form-text">Tanlansa, output qatorlari avtomatik to'ldiriladi.</div>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Input vazn (kg)</label>
@@ -60,13 +69,39 @@
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
-                <thead><tr><th style="width:8%"></th><th style="width:42%">Mahsulot</th><th>Miqdor (kg)</th><th></th></tr></thead>
+                <thead><tr><th style="width:8%"></th><th style="width:36%">Mahsulot</th><th>Miqdor (kg)</th><th>Soni (dona)</th><th></th></tr></thead>
                 <tbody id="output-rows">
                 {% for out_form in formset %}
                     <tr class="formset-row">
                         <td class="output-thumb">{% include "partials/product_thumb.html" %}</td>
                         <td>{{ out_form.id }}{{ out_form.product }}{{ out_form.product.errors }}</td>
                         <td>{{ out_form.quantity }}{{ out_form.quantity.errors }}</td>
+                        <td>{{ out_form.pieces }}{{ out_form.pieces.errors }}</td>
+                        <td class="text-center">
+                            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{ expense_formset.management_form }}
+    <div class="card table-card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span>Qo'shimcha xarajatlar (ishchi kuchi, qadoqlash...) — dona/bo'lak soni bo'yicha taqsimlanadi</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-expense-rows">+ Qo'shish</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Turi</th><th>Summa</th><th>Izoh</th><th></th></tr></thead>
+                <tbody id="expense-rows">
+                {% for exp_form in expense_formset %}
+                    <tr class="formset-row">
+                        <td>{{ exp_form.id }}{{ exp_form.expense_type }}</td>
+                        <td>{{ exp_form.amount }}</td>
+                        <td>{{ exp_form.notes }}</td>
                         <td class="text-center">
                             <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
                         </td>
@@ -79,15 +114,19 @@
 
     <div class="card table-card mb-3">
         <div class="card-body row g-3 text-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stat-label">Output jami</div>
                 <div class="fs-5 fw-semibold" id="output-total">0.000 kg</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stat-label">Farq (input − output)</div>
                 <div class="fs-5 fw-semibold" id="diff-total">0.000 kg</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <div class="stat-label">Qo'shimcha xarajatlar jami</div>
+                <div class="fs-5 fw-semibold" id="butchering-expenses-total">0 so'm</div>
+            </div>
+            <div class="col-md-3">
                 <div class="stat-label">Yield %</div>
                 <div class="grand-total-box" id="yield-total">0%</div>
             </div>
@@ -105,6 +144,20 @@
         <td class="output-thumb"><div class="product-thumb-placeholder">🥩</div></td>
         <td>{{ formset.empty_form.id }}{{ formset.empty_form.product }}</td>
         <td>{{ formset.empty_form.quantity }}</td>
+        <td>{{ formset.empty_form.pieces }}</td>
+        <td class="text-center">
+            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+        </td>
+    </tr>
+</tbody></table>
+</template>
+
+<template id="expense-empty-form">
+<table><tbody>
+    <tr class="formset-row">
+        <td>{{ expense_formset.empty_form.id }}{{ expense_formset.empty_form.expense_type }}</td>
+        <td>{{ expense_formset.empty_form.amount }}</td>
+        <td>{{ expense_formset.empty_form.notes }}</td>
         <td class="text-center">
             <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
         </td>
@@ -122,7 +175,9 @@
         window.ButcheringFormInit({
             products: {{ products_json|safe }},
             purchases: {{ purchases_json|safe }},
+            specifications: {{ specifications_json|safe }},
             formsetPrefix: '{{ formset.prefix }}',
+            expenseFormsetPrefix: '{{ expense_formset.prefix }}',
         });
     });
 </script>

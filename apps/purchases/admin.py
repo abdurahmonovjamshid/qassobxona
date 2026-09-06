@@ -1,8 +1,14 @@
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 
-from .models import Purchase, PurchaseExpense
+from .models import Purchase, PurchaseExpense, PurchaseItem
 from .services import purchase_service
+
+
+class PurchaseItemInline(admin.TabularInline):
+    model = PurchaseItem
+    extra = 1
+    readonly_fields = ('total', 'landed_unit_cost')
 
 
 class PurchaseExpenseInline(admin.TabularInline):
@@ -13,16 +19,15 @@ class PurchaseExpenseInline(admin.TabularInline):
 @admin.register(Purchase)
 class PurchaseAdmin(admin.ModelAdmin):
     list_display = (
-        'purchase_number', 'supplier', 'product', 'date', 'animal_type', 'net_weight',
-        'price_per_kg', 'total_amount', 'paid_amount', 'debt_amount', 'status',
+        'purchase_number', 'supplier', 'date', 'total_amount', 'paid_amount', 'debt_amount', 'status',
     )
-    list_filter = ('status', 'animal_type', 'date')
-    search_fields = ('purchase_number', 'supplier__name', 'animal_type', 'notes')
-    autocomplete_fields = ('supplier', 'product', 'created_by')
+    list_filter = ('status', 'date')
+    search_fields = ('purchase_number', 'supplier__name', 'notes')
+    autocomplete_fields = ('supplier', 'created_by')
     readonly_fields = ('total_amount', 'debt_amount', 'status', 'created_at', 'updated_at')
     date_hierarchy = 'date'
     ordering = ('-date', '-id')
-    inlines = (PurchaseExpenseInline,)
+    inlines = (PurchaseItemInline, PurchaseExpenseInline)
     actions = ('confirm_purchases', 'cancel_purchases')
 
     def save_model(self, request, obj, form, change):

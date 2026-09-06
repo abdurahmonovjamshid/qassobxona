@@ -19,6 +19,7 @@ class StockMovement(models.Model):
 
     product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='stock_movements')
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    pieces = models.PositiveIntegerField(default=0, help_text="Dona/bo'lak soni")
     movement_type = models.CharField(max_length=20, choices=MovementType.choices)
     direction = models.CharField(max_length=3, choices=Direction.choices)
     unit_cost = models.DecimalField(max_digits=14, decimal_places=2, default=0)
@@ -31,10 +32,52 @@ class StockMovement(models.Model):
         ordering = ['-date', '-id']
 
     def clean(self):
-        if self.quantity <= 0:
-            raise ValidationError('Ombor miqdori musbat bolishi kerak.')
+        if self.quantity < 0 or (self.pieces or 0) < 0:
+            raise ValidationError('Ombor miqdori manfiy bolmasligi kerak.')
+        if self.quantity == 0 and not self.pieces:
+            raise ValidationError("Miqdor (kg) yoki dona sonidan kamida bittasi musbat bolishi kerak.")
         if self.unit_cost < 0:
             raise ValidationError('Tannarx manfiy bolmasligi kerak.')
 
     def __str__(self):
         return f'{self.product} {self.direction} {self.quantity}'
+
+
+class InventoryCount(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft'
+        CONFIRMED = 'CONFIRMED', 'Confirmed'
+
+    date = models.DateField()
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-id']
+
+    def __str__(self):
+        return f'Inventarizatsiya #{self.pk or "new"} ({self.date})'
+
+
+class InventoryCountItem(models.Model):
+    count = models.ForeignKey(InventoryCount, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='inventory_count_items')
+    system_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    system_pieces = models.IntegerField(default=0)
+    counted_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    counted_pieces = models.PositiveIntegerField(default=0)
+    diff_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    diff_pieces = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['id']
+
+    def clean(self):
+        if self.counted_kg is not None and self.counted_kg < 0:
+            raise ValidationError("Hisoblangan miqdor manfiy bolmasligi kerak.")
+
+    def __str__(self):
+        return f'{self.count} - {self.product}'

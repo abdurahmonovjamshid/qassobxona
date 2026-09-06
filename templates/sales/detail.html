@@ -35,13 +35,14 @@
     <div class="card-header bg-white">Mahsulotlar</div>
     <div class="table-responsive">
         <table class="table mb-0">
-            <thead><tr><th></th><th>Mahsulot</th><th class="text-end">Miqdor</th><th class="text-end">Narx</th><th class="text-end">Chegirma</th><th class="text-end">Jami</th><th class="text-end">Foyda</th></tr></thead>
+            <thead><tr><th></th><th>Mahsulot</th><th class="text-end">Miqdor</th><th class="text-end">Soni</th><th class="text-end">Narx</th><th class="text-end">Chegirma</th><th class="text-end">Jami</th><th class="text-end">Foyda</th></tr></thead>
             <tbody>
             {% for item in items %}
                 <tr>
                     <td>{% include "partials/product_thumb.html" with product=item.product %}</td>
                     <td>{{ item.product.name }}</td>
                     <td class="text-end">{{ item.quantity|floatformat:3 }} kg</td>
+                    <td class="text-end">{{ item.pieces }} dona</td>
                     <td class="text-end">{{ item.price|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ item.discount|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ item.total|floatformat:0|intcomma }}</td>

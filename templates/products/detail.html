@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">{{ product.name }}</h4>
+    <div>
+        <a href="{% url 'products:update' product.pk %}" class="btn btn-outline-primary">Tahrirlash</a>
+        <a href="{% url 'products:list' %}" class="btn btn-outline-secondary">Ortga</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Kod</div><div class="stat-value">{{ product.code }}</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Kategoriya</div><div class="stat-value">{{ product.category.name }}</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Sotuv narxi</div><div class="stat-value">{{ product.sale_price|floatformat:0|intcomma }}</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Ombor qoldig'i</div><div class="stat-value">{{ stock|floatformat:3 }} kg / {{ stock_pieces }} dona</div>
+    </div></div></div>
+</div>
+
+{% if product.image %}<img src="{{ product.image.url }}" style="max-width:200px;border-radius:8px;" class="mb-3">{% endif %}
+{% if product.description %}<p>{{ product.description }}</p>{% endif %}
+
+{% if specifications %}
+<div class="card table-card mt-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span>Bo'laklash spetsifikatsiyalari</span>
+        <a href="{% url 'butchering:specification_create' %}?product={{ product.pk }}" class="btn btn-sm btn-outline-primary">+ Yangi</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Usul</th><th>Chiqish mahsulotlari</th></tr></thead>
+            <tbody>
+            {% for spec in specifications %}
+                <tr>
+                    <td>{{ spec.name }}</td>
+                    <td>
+                        {% for item in spec.items.all %}
+                            <span class="badge bg-secondary-subtle text-dark">{{ item.child_product.name }}</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<a href="{% url 'butchering:specification_create' %}?product={{ product.pk }}" class="btn btn-outline-primary mt-2">+ Bo'laklash spetsifikatsiyasi qo'shish</a>
+{% endif %}
+{% endblock %}

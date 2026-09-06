@@ -19,6 +19,7 @@ urlpatterns = [
 
     path('', RedirectView.as_view(pattern_name='dashboard:index', permanent=False)),
     path('dashboard/', include('apps.dashboard.urls')),
+    path('products/', include('apps.products.urls')),
     path('sales/', include('apps.sales.urls')),
     path('purchases/', include('apps.purchases.urls')),
     path('butchering/', include('apps.butchering.urls')),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('suppliers/', include('apps.suppliers.urls')),
     path('payments/', include('apps.payments.urls')),
     path('expenses/', include('apps.expenses.urls')),
+    path('kassa/', include('apps.kassa.urls')),
     path('reports/', include('apps.reports.urls')),
 ]
 

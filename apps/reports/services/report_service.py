@@ -8,7 +8,7 @@ from apps.customers.models import Customer
 from apps.expenses.models import Expense
 from apps.inventory.models import StockMovement
 from apps.products.models import Product
-from apps.purchases.models import Purchase
+from apps.purchases.models import Purchase, PurchaseItem
 from apps.sales.models import Sale, SaleItem
 from apps.suppliers.models import Supplier
 
@@ -38,23 +38,23 @@ def sales_report(*, date_from=None, date_to=None, customer_id=None, product_id=N
     }
 
 
-def purchase_report(*, date_from=None, date_to=None, supplier_id=None, animal_type=None):
-    purchases = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).select_related('supplier')
+def purchase_report(*, date_from=None, date_to=None, supplier_id=None):
+    purchases = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).select_related('supplier').prefetch_related('items')
     if date_from:
         purchases = purchases.filter(date__gte=date_from)
     if date_to:
         purchases = purchases.filter(date__lte=date_to)
     if supplier_id:
         purchases = purchases.filter(supplier_id=supplier_id)
-    if animal_type:
-        purchases = purchases.filter(animal_type__icontains=animal_type)
+
+    total_weight = PurchaseItem.objects.filter(purchase__in=purchases).aggregate(s=Sum('net_weight'))['s'] or ZERO
 
     return {
         'purchases': purchases.order_by('-date'),
         'total_amount': purchases.aggregate(s=Sum('total_amount'))['s'] or ZERO,
         'total_paid': purchases.aggregate(s=Sum('paid_amount'))['s'] or ZERO,
         'total_debt': purchases.aggregate(s=Sum('debt_amount'))['s'] or ZERO,
-        'total_weight': purchases.aggregate(s=Sum('net_weight'))['s'] or ZERO,
+        'total_weight': total_weight,
     }
 
 

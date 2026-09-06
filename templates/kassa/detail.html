@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Kassa{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">💰 Kassa</h4>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label">Joriy balans</div>
+                <div class="stat-value {% if balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ balance|floatformat:0|intcomma }} so'm</div>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="text-muted small">Kassa balansini qo'lda o'zgartirish faqat <a href="/admin/kassa/cashtransaction/add/">admin panel</a> orqali amalga oshiriladi.</p>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+    <div class="col-12 col-md-auto"><a href="?all=1" class="btn btn-outline-secondary">Barchasi</a></div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th>Sana</th><th>Turi</th><th class="text-end">Summa</th><th>Havola</th><th>Izoh</th></tr></thead>
+            <tbody>
+            {% for t in transactions %}
+                <tr>
+                    <td>{{ t.date|date:"d.m.Y" }}</td>
+                    <td>{{ t.get_transaction_type_display }}</td>
+                    <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|floatformat:0|intcomma }}</td>
+                    <td class="small text-muted">{{ t.reference }}</td>
+                    <td class="small text-muted">{{ t.notes }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

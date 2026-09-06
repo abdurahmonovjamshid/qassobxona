@@ -35,8 +35,7 @@
         <table class="table table-hover mb-0 align-middle">
             <thead>
             <tr>
-                <th>№</th><th>Sana</th><th>Yetkazib beruvchi</th><th>Mahsulot</th><th>Hayvon turi</th>
-                <th class="text-end">Netto vazn</th><th class="text-end">Narx/kg</th>
+                <th>№</th><th>Sana</th><th>Yetkazib beruvchi</th><th>Mahsulotlar</th>
                 <th class="text-end">Jami</th><th class="text-end">To'langan</th>
                 <th class="text-end">Qarz</th><th>Holat</th><th></th>
             </tr>
@@ -48,18 +47,15 @@
                     <td>{{ purchase.date|date:"d.m.Y" }}</td>
                     <td>{{ purchase.supplier.name }}</td>
                     <td>
-                        {% if purchase.product %}
-                            <div class="d-flex align-items-center gap-2">
-                                {% include "partials/product_thumb.html" with product=purchase.product %}
-                                <span>{{ purchase.product.name }}</span>
+                        {% for item in purchase.items.all %}
+                            <div class="d-flex align-items-center gap-2 small">
+                                {% include "partials/product_thumb.html" with product=item.product %}
+                                <span>{{ item.product.name }} — {{ item.net_weight|floatformat:1 }} kg</span>
                             </div>
-                        {% else %}
-                            <span class="text-muted small">Tanlanmagan</span>
-                        {% endif %}
+                        {% empty %}
+                            <span class="text-muted small">Mahsulot yo'q</span>
+                        {% endfor %}
                     </td>
-                    <td>{{ purchase.animal_type }}</td>
-                    <td class="text-end">{{ purchase.net_weight|floatformat:3 }} kg</td>
-                    <td class="text-end">{{ purchase.price_per_kg|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ purchase.total_amount|floatformat:0|intcomma }}</td>
                     <td class="text-end text-success">{{ purchase.paid_amount|floatformat:0|intcomma }}</td>
                     <td class="text-end {% if purchase.debt_amount > 0 %}text-danger{% endif %}">{{ purchase.debt_amount|floatformat:0|intcomma }}</td>
@@ -67,7 +63,7 @@
                     <td><a href="{% url 'purchases:detail' purchase.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
                 </tr>
             {% empty %}
-                <tr><td colspan="12" class="text-center text-muted py-4">Xaridlar topilmadi.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-4">Xaridlar topilmadi.</td></tr>
             {% endfor %}
             </tbody>
         </table>

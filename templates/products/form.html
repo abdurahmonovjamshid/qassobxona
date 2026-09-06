@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h4 class="mb-3">{{ title }}</h4>
+<form method="post" enctype="multipart/form-data" class="card table-card p-4" style="max-width: 560px;">
+    {% csrf_token %}
+    <div class="mb-3"><label class="form-label">Nomi</label>{{ form.name }}{{ form.name.errors }}</div>
+    <div class="mb-3"><label class="form-label">Kod</label>{{ form.code }}{{ form.code.errors }}</div>
+    <div class="mb-3"><label class="form-label">Kategoriya</label>{{ form.category }}{{ form.category.errors }}</div>
+    <div class="mb-3"><label class="form-label">O'lchov birligi</label>{{ form.unit }}</div>
+    <div class="mb-3"><label class="form-label">Sotuv narxi (1 kg)</label>{{ form.sale_price }}{{ form.sale_price.errors }}</div>
+    <div class="mb-3"><label class="form-label">Rasm</label>{{ form.image }}
+        {% if product.image %}<img src="{{ product.image.url }}" class="mt-2" style="width:80px;height:80px;object-fit:cover;border-radius:6px;">{% endif %}
+    </div>
+    <div class="mb-3"><label class="form-label">Izoh</label>{{ form.description }}</div>
+    <div class="form-check mb-3">{{ form.active }}<label class="form-check-label">Faol</label></div>
+    <div>
+        <button type="submit" class="btn btn-primary">Saqlash</button>
+        <a href="{% url 'products:list' %}" class="btn btn-outline-secondary">Bekor qilish</a>
+    </div>
+</form>
+{% endblock %}

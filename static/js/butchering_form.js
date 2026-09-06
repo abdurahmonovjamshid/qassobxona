@@ -16,9 +16,11 @@
         return `<div class="product-thumb-placeholder${cls}">🥩</div>`;
     }
 
-    window.ButcheringFormInit = function ({ products, purchases, formsetPrefix }) {
+    window.ButcheringFormInit = function ({ products, purchases, specifications, formsetPrefix, expenseFormsetPrefix }) {
+        specifications = specifications || [];
         const purchaseSelect = document.querySelector('[data-role="purchase-select"]');
         const inputProductSelect = document.querySelector('[data-role="input-product-select"]');
+        const specificationSelect = document.querySelector('[data-role="specification-select"]');
         const inputWeightInput = document.querySelector('[data-role="input-weight"]');
         const headerThumb = document.getElementById('input-product-thumb');
         const headerName = document.getElementById('input-product-name');
@@ -65,19 +67,33 @@
             holder.innerHTML = thumbHtml(product);
         }
 
+        let currentPurchaseItems = [];
+
+        function applyPurchaseItem() {
+            if (!inputProductSelect) return;
+            const match = currentPurchaseItems.find((it) => String(it.product_id) === String(inputProductSelect.value));
+            if (match && inputWeightInput) inputWeightInput.value = match.net_weight;
+        }
+
         if (purchaseSelect) {
             purchaseSelect.addEventListener('change', () => {
                 const purchase = purchases.find((p) => String(p.id) === String(purchaseSelect.value));
-                if (purchase) {
-                    if (inputProductSelect && purchase.product_id) inputProductSelect.value = purchase.product_id;
-                    if (inputWeightInput) inputWeightInput.value = purchase.net_weight;
+                currentPurchaseItems = purchase ? purchase.items : [];
+                if (currentPurchaseItems.length === 1 && inputProductSelect) {
+                    inputProductSelect.value = currentPurchaseItems[0].product_id;
+                    if (inputWeightInput) inputWeightInput.value = currentPurchaseItems[0].net_weight;
                 }
                 updateHeader();
                 recalcOutputs();
             });
         }
 
-        if (inputProductSelect) inputProductSelect.addEventListener('change', updateHeader);
+        if (inputProductSelect) {
+            inputProductSelect.addEventListener('change', () => {
+                applyPurchaseItem();
+                updateHeader();
+            });
+        }
         if (inputWeightInput) {
             inputWeightInput.addEventListener('input', () => {
                 updateHeader();
@@ -97,7 +113,7 @@
             });
         }
 
-        initFormset({
+        const outputFormset = initFormset({
             containerId: 'output-rows',
             prefix: formsetPrefix,
             templateId: 'output-empty-form',
@@ -108,7 +124,69 @@
             onRowRemoved: recalcOutputs,
         });
 
+        // --- Spetsifikatsiya (bo'laklash usuli) tanlash ---
+        function refreshSpecificationOptions() {
+            if (!specificationSelect) return;
+            const productId = inputProductSelect ? inputProductSelect.value : null;
+            const matching = specifications.filter((s) => String(s.parent_product_id) === String(productId));
+            specificationSelect.innerHTML = '<option value="">---------</option>';
+            matching.forEach((s) => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                specificationSelect.appendChild(opt);
+            });
+        }
+
+        function clearOutputRows() {
+            const totalFormsInput = document.getElementById(`id_${formsetPrefix}-TOTAL_FORMS`);
+            if (outputRows) outputRows.querySelectorAll('.formset-row').forEach((row) => row.remove());
+            if (totalFormsInput) totalFormsInput.value = '0';
+        }
+
+        function applySpecification() {
+            if (!specificationSelect) return;
+            const spec = specifications.find((s) => String(s.id) === String(specificationSelect.value));
+            if (!spec) return;
+            clearOutputRows();
+            spec.items.forEach((item) => {
+                const row = outputFormset.addRow();
+                if (!row) return;
+                const productSelect = row.querySelector('[data-role="output-product"]');
+                if (productSelect) productSelect.value = item.child_product_id;
+                updateRowThumb(row);
+            });
+            recalcOutputs();
+        }
+
+        if (inputProductSelect) inputProductSelect.addEventListener('change', refreshSpecificationOptions);
+        if (specificationSelect) specificationSelect.addEventListener('change', applySpecification);
+        refreshSpecificationOptions();
+
+        function recalcExpenses() {
+            let total = 0;
+            document.querySelectorAll('[data-role="butchering-expense-amount"]').forEach((el) => {
+                total += parseFloat(el.value) || 0;
+            });
+            const el = document.getElementById('butchering-expenses-total');
+            if (el) el.textContent = total.toLocaleString('uz-UZ') + " so'm";
+        }
+        const expenseRows = document.getElementById('expense-rows');
+        if (expenseRows) {
+            expenseRows.addEventListener('input', (e) => {
+                if (e.target.matches('[data-role="butchering-expense-amount"]')) recalcExpenses();
+            });
+        }
+        initFormset({
+            containerId: 'expense-rows',
+            prefix: expenseFormsetPrefix,
+            templateId: 'expense-empty-form',
+            onRowAdded: recalcExpenses,
+            onRowRemoved: recalcExpenses,
+        });
+
         updateHeader();
         recalcOutputs();
+        recalcExpenses();
     };
 })();

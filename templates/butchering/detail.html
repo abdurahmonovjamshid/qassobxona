@@ -19,6 +19,7 @@
     <div>
         <div class="text-muted small">Input mahsulot</div>
         <div class="fw-semibold">{{ butchering.input_product.name }}</div>
+        {% if butchering.specification %}<div class="text-muted small">Usul: {{ butchering.specification.name }}</div>{% endif %}
     </div>
 </div>
 
@@ -41,15 +42,32 @@
     <div class="card-header bg-white">Output mahsulotlar</div>
     <div class="table-responsive">
         <table class="table mb-0">
-            <thead><tr><th></th><th>Mahsulot</th><th class="text-end">Miqdor</th><th class="text-end">Tannarx/kg</th></tr></thead>
+            <thead><tr><th></th><th>Mahsulot</th><th class="text-end">Miqdor</th><th class="text-end">Soni</th><th class="text-end">Tannarx/kg</th></tr></thead>
             <tbody>
             {% for out in outputs %}
                 <tr>
                     <td>{% include "partials/product_thumb.html" with product=out.product %}</td>
                     <td>{{ out.product.name }}</td>
                     <td class="text-end">{{ out.quantity|floatformat:3 }} kg</td>
+                    <td class="text-end">{{ out.pieces }} dona</td>
                     <td class="text-end">{{ out.unit_cost|floatformat:0 }}</td>
                 </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card table-card mt-3">
+    <div class="card-header bg-white">Qo'shimcha xarajatlar</div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Turi</th><th class="text-end">Summa</th><th>Izoh</th></tr></thead>
+            <tbody>
+            {% for exp in expenses %}
+                <tr><td>{{ exp.get_expense_type_display }}</td><td class="text-end">{{ exp.amount|floatformat:0 }}</td><td>{{ exp.notes }}</td></tr>
+            {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-3">Yo'q</td></tr>
             {% endfor %}
             </tbody>
         </table>

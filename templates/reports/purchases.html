@@ -13,7 +13,6 @@
             {% for s in suppliers %}<option value="{{ s.id }}" {% if request.GET.supplier == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
         </select>
     </div>
-    <div class="col-12 col-md-auto"><input type="text" name="animal_type" class="form-control" placeholder="Hayvon turi" value="{{ request.GET.animal_type }}"></div>
     <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
 </form>
 
@@ -27,20 +26,23 @@
 <div class="card table-card">
     <div class="table-responsive">
         <table class="table mb-0">
-            <thead><tr><th>№</th><th>Sana</th><th>Supplier</th><th>Hayvon</th><th class="text-end">Vazn</th><th class="text-end">Jami</th><th class="text-end">Qarz</th></tr></thead>
+            <thead><tr><th>№</th><th>Sana</th><th>Supplier</th><th>Mahsulotlar (vazn)</th><th class="text-end">Jami</th><th class="text-end">Qarz</th></tr></thead>
             <tbody>
             {% for purchase in purchases %}
                 <tr>
                     <td><a href="{% url 'purchases:detail' purchase.pk %}">{{ purchase.purchase_number }}</a></td>
                     <td>{{ purchase.date|date:"d.m.Y" }}</td>
                     <td>{{ purchase.supplier.name }}</td>
-                    <td>{{ purchase.animal_type }}</td>
-                    <td class="text-end">{{ purchase.net_weight|floatformat:3 }}</td>
+                    <td>
+                        {% for item in purchase.items.all %}
+                            <div class="small">{{ item.product.name }} — {{ item.net_weight|floatformat:3 }} kg</div>
+                        {% endfor %}
+                    </td>
                     <td class="text-end">{{ purchase.total_amount|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ purchase.debt_amount|floatformat:0|intcomma }}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-4">Ma'lumot yo'q.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Ma'lumot yo'q.</td></tr>
             {% endfor %}
             </tbody>
         </table>
