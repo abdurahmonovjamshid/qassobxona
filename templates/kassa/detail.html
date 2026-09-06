@@ -15,8 +15,39 @@
             </div>
         </div>
     </div>
+    {% if user.is_superuser %}
+    <div class="col-md-8">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label mb-2">Kassaga naqd pul kiritish/tuzatish (boshlang'ich balans)</div>
+                <form method="post" action="{% url 'kassa:add_balance' %}" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small">{{ balance_form.amount.label }}</label>
+                        {{ balance_form.amount }}
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small">{{ balance_form.date.label }}</label>
+                        {{ balance_form.date }}
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small">{{ balance_form.notes.label }}</label>
+                        {{ balance_form.notes }}
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Kiritish</button>
+                    </div>
+                </form>
+                <p class="text-muted small mb-0 mt-2">{{ balance_form.amount.help_text }} Batafsil tarix uchun <a href="/admin/kassa/cashtransaction/">admin panel</a>.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-md-8 d-flex align-items-center">
+        <p class="text-muted small mb-0">Kassa balansini qo'lda o'zgartirish faqat admin (superuser) tomonidan amalga oshiriladi.</p>
+    </div>
+    {% endif %}
 </div>
-<p class="text-muted small">Kassa balansini qo'lda o'zgartirish faqat <a href="/admin/kassa/cashtransaction/add/">admin panel</a> orqali amalga oshiriladi.</p>
 
 <form method="get" class="row g-2 mb-3">
     <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>

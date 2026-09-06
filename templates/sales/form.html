@@ -26,6 +26,11 @@
                 {{ form.date.errors }}
             </div>
             <div class="col-6 col-md-2">
+                <label class="form-label">{{ form.due_date.label }}</label>
+                {{ form.due_date }}
+                {{ form.due_date.errors }}
+            </div>
+            <div class="col-6 col-md-2">
                 <label class="form-label d-flex justify-content-between align-items-center flex-wrap gap-1">
                     <span>{{ form.paid_amount.label }}</span>
                     <span class="btn-group btn-group-sm" role="group">

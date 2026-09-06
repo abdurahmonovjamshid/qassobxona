@@ -1,8 +1,5 @@
-from decimal import Decimal
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 
@@ -23,10 +20,8 @@ def supplier_list(request):
 
     rows = []
     for supplier in suppliers:
-        total_purchases = supplier.purchases.filter(status=Purchase.Status.CONFIRMED).aggregate(
-            s=Sum('total_amount'))['s'] or Decimal('0')
-        total_debt = supplier.purchases.filter(status=Purchase.Status.CONFIRMED).aggregate(
-            s=Sum('debt_amount'))['s'] or Decimal('0')
+        total_purchases = supplier.get_total_purchases()
+        total_debt = supplier.get_total_debt()
         rows.append({'supplier': supplier, 'total_purchases': total_purchases, 'debt': total_debt})
 
     return render(request, 'suppliers/list.html', {'rows': rows})
@@ -63,7 +58,7 @@ def supplier_update(request, pk):
 def supplier_statement(request, pk):
     supplier = get_object_or_404(Supplier, pk=pk)
     date_from, date_to = get_date_range(request)
-    statement = statement_service.build_supplier_statement(
+    statement = statement_service.build_partner_statement_for_supplier(
         supplier, date_from=parse_date(date_from) if date_from else None,
         date_to=parse_date(date_to) if date_to else None,
     )
@@ -79,14 +74,14 @@ def supplier_statement(request, pk):
 def supplier_statement_export(request, pk):
     supplier = get_object_or_404(Supplier, pk=pk)
     date_from, date_to = get_date_range(request)
-    statement = statement_service.build_supplier_statement(
+    statement = statement_service.build_partner_statement_for_supplier(
         supplier, date_from=parse_date(date_from) if date_from else None,
         date_to=parse_date(date_to) if date_to else None,
     )
-    return statement_to_response(
-        filename=f'akt-sverka-{supplier.name}.xlsx',
-        sections=[('Yetkazib beruvchi (xarid)', statement)],
-    )
+    sections = [('Yetkazib beruvchi (xarid)', statement['supplier_statement'])]
+    if statement['customer_statement']:
+        sections.insert(0, ('Mijoz (sotuv)', statement['customer_statement']))
+    return statement_to_response(filename=f'akt-sverka-{supplier.name}.xlsx', sections=sections)
 
 
 @login_required
@@ -95,12 +90,16 @@ def supplier_detail(request, pk):
     purchases = supplier.purchases.exclude(status=Purchase.Status.CANCELLED)
     payments = supplier.payments.all()
 
-    total_purchases = purchases.filter(status=Purchase.Status.CONFIRMED).aggregate(
-        s=Sum('total_amount'))['s'] or Decimal('0')
-    total_payments = payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
-    debt = purchases.filter(status=Purchase.Status.CONFIRMED).aggregate(s=Sum('debt_amount'))['s'] or Decimal('0')
+    total_purchases = supplier.get_total_purchases()
+    total_payments = supplier.get_total_payments()
+    debt = supplier.get_total_debt()
 
     history = []
+    if supplier.opening_balance:
+        history.append({
+            'date': supplier.created_at.date(), 'op': "Boshlang'ich qarz",
+            'amount': supplier.opening_balance, 'kind': 'opening',
+        })
     for purchase in purchases:
         history.append({'date': purchase.date, 'op': f'Xarid {purchase.purchase_number}', 'amount': purchase.total_amount, 'kind': 'purchase'})
     for payment in payments:

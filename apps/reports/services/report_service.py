@@ -80,8 +80,7 @@ def inventory_report():
 def debtor_report():
     rows = []
     for customer in Customer.objects.all():
-        debt = customer.sales.filter(status=Sale.Status.CONFIRMED).aggregate(
-            s=Sum('debt_amount'))['s'] or ZERO
+        debt = customer.get_total_debt()
         if debt > 0:
             rows.append({'customer': customer, 'debt': debt})
     rows.sort(key=lambda r: r['debt'], reverse=True)
@@ -91,8 +90,7 @@ def debtor_report():
 def creditor_report():
     rows = []
     for supplier in Supplier.objects.all():
-        debt = supplier.purchases.filter(status=Purchase.Status.CONFIRMED).aggregate(
-            s=Sum('debt_amount'))['s'] or ZERO
+        debt = supplier.get_total_debt()
         if debt > 0:
             rows.append({'supplier': supplier, 'debt': debt})
     rows.sort(key=lambda r: r['debt'], reverse=True)

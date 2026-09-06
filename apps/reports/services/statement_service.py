@@ -88,3 +88,27 @@ def build_partner_statement(customer, *, date_from=None, date_to=None):
         # Sof balans: mijoz bizga qancha qarzdor minus biz yetkazib beruvchiga qancha qarzdormiz.
         result['net_balance'] = customer_stmt['closing_balance'] - supplier_stmt['closing_balance']
     return result
+
+
+def build_partner_statement_for_supplier(supplier, *, date_from=None, date_to=None):
+    """`build_partner_statement`ning Supplier tarafidan kirish nuqtasi: agar shu
+    supplier biror Customer bilan bog'langan bo'lsa (Customer.linked_supplier),
+    ikkala tomon (sotuv + xarid) birlashtirilib qaytariladi; aks holda faqat
+    supplier (xarid) tarafi qaytariladi."""
+    from apps.customers.models import Customer
+
+    supplier_stmt = build_supplier_statement(supplier, date_from=date_from, date_to=date_to)
+    result = {
+        'customer_statement': None,
+        'supplier_statement': supplier_stmt,
+        'rows': [{**r, 'side': 'supplier'} for r in supplier_stmt['rows']],
+        'net_balance': -supplier_stmt['closing_balance'],
+    }
+    customer = Customer.objects.filter(linked_supplier=supplier, is_supplier=True).first()
+    if customer:
+        customer_stmt = build_customer_statement(customer, date_from=date_from, date_to=date_to)
+        result['customer_statement'] = customer_stmt
+        result['rows'] += [{**r, 'side': 'customer'} for r in customer_stmt['rows']]
+        result['rows'].sort(key=lambda r: r['date'])
+        result['net_balance'] = customer_stmt['closing_balance'] - supplier_stmt['closing_balance']
+    return result

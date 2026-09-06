@@ -33,6 +33,14 @@
                 <li class="nav-item"><a class="nav-link" href="{% url 'reports:index' %}">Hisobotlar</a></li>
             </ul>
             <ul class="navbar-nav align-items-lg-center">
+                <li class="nav-item">
+                    <a class="nav-link fs-5 position-relative" href="{% url 'sales:due' %}" title="To'lov muddati kelganlar">
+                        🔔
+                        {% if due_sales_count %}
+                            <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle" style="font-size:.6rem;">{{ due_sales_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
                 <li class="nav-item"><a class="nav-link fs-5" href="/admin/" title="Admin">⚙️</a></li>
                 <li class="nav-item">
                     <form method="post" action="{% url 'logout' %}">

@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
 from apps.inventory.models import StockMovement
 from apps.inventory.services import inventory_service
@@ -71,6 +72,19 @@ def cancel_sale(sale: Sale, *, user=None) -> Sale:
     sale.status = Sale.Status.CANCELLED
     sale.save(update_fields=['status', 'updated_at'])
     return sale
+
+
+def get_due_sales():
+    """To'lov muddati kelgan (bugun yoki o'tib ketgan) va qarzi bor
+    tasdiqlangan sotuvlar ro'yxati, muddat bo'yicha saralangan."""
+    today = timezone.localdate()
+    return (
+        Sale.objects.filter(
+            status=Sale.Status.CONFIRMED, debt_amount__gt=0,
+            due_date__isnull=False, due_date__lte=today,
+        )
+        .select_related('customer').order_by('due_date')
+    )
 
 
 def recalc_sale_payment(sale: Sale) -> Sale:

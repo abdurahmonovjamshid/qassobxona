@@ -12,6 +12,9 @@ class Sale(models.Model):
     customer = models.ForeignKey('customers.Customer', on_delete=models.PROTECT, related_name='sales')
     sale_number = models.CharField(max_length=50, unique=True)
     date = models.DateField()
+    due_date = models.DateField(
+        null=True, blank=True, help_text="To'lov qilinishi kerak bo'lgan muddat",
+    )
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     paid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     debt_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)

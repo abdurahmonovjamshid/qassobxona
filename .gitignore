@@ -88,6 +88,7 @@ celerybeat-schedule
 venv/
 ENV/
 .vscode
+.idea/
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -103,13 +104,18 @@ ENV/
 
 .DS_Store
 *.sqlite3
-*.sqlite3.bak
-*.bak
 media/
 *.pyc
 *.db
 *.pid
 staticfiles/
+
+# Backup fayllar (masalan `reset_business_data` buyrug'i avtomatik yaratadigan
+# db.sqlite3.bak-<vaqt> kabi zaxira nusxalar) — GitHub'ga yuklanmasin.
+*.bak
+*.bak-*
+*.bak.*
+*_backup*
 
 # Ignore Django Migrations in Development if you are working on team
 

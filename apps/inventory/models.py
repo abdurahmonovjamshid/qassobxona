@@ -71,6 +71,12 @@ class InventoryCountItem(models.Model):
     counted_pieces = models.PositiveIntegerField(default=0)
     diff_kg = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     diff_pieces = models.IntegerField(default=0)
+    unit_cost = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True,
+        help_text="To'ldirilsa, ushbu mahsulot uchun tannarx shu qiymatga qayta "
+                  "belgilanadi (butun qoldiq chiqim qilinib, shu tannarx bilan "
+                  "qayta kirim qilinadi). Bo'sh qoldirilsa, tannarx o'zgarmaydi.",
+    )
 
     class Meta:
         ordering = ['id']
@@ -78,6 +84,8 @@ class InventoryCountItem(models.Model):
     def clean(self):
         if self.counted_kg is not None and self.counted_kg < 0:
             raise ValidationError("Hisoblangan miqdor manfiy bolmasligi kerak.")
+        if self.unit_cost is not None and self.unit_cost < 0:
+            raise ValidationError('Tannarx manfiy bolmasligi kerak.')
 
     def __str__(self):
         return f'{self.count} - {self.product}'

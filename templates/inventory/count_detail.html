@@ -9,7 +9,7 @@
 <div class="card table-card">
     <div class="table-responsive">
         <table class="table mb-0 align-middle">
-            <thead><tr><th>Mahsulot</th><th class="text-end">Tizimda (kg)</th><th class="text-end">Hisoblangan (kg)</th><th class="text-end">Farq (kg)</th><th class="text-end">Tizimda (dona)</th><th class="text-end">Hisoblangan (dona)</th><th class="text-end">Farq (dona)</th></tr></thead>
+            <thead><tr><th>Mahsulot</th><th class="text-end">Tizimda (kg)</th><th class="text-end">Hisoblangan (kg)</th><th class="text-end">Farq (kg)</th><th class="text-end">Tizimda (dona)</th><th class="text-end">Hisoblangan (dona)</th><th class="text-end">Farq (dona)</th><th class="text-end">Yangi tannarx</th></tr></thead>
             <tbody>
             {% for item in items %}
                 <tr>
@@ -20,9 +20,10 @@
                     <td class="text-end">{{ item.system_pieces }}</td>
                     <td class="text-end">{{ item.counted_pieces }}</td>
                     <td class="text-end {% if item.diff_pieces != 0 %}fw-semibold {% if item.diff_pieces > 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">{{ item.diff_pieces }}</td>
+                    <td class="text-end">{% if item.unit_cost is not None %}{{ item.unit_cost|floatformat:0 }}{% else %}—{% endif %}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
             {% endfor %}
             </tbody>
         </table>

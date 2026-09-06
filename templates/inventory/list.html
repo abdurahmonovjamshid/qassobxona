@@ -2,9 +2,13 @@
 {% load humanize %}
 {% block title %}Ombor{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h4 class="mb-0">📦 Ombor</h4>
-    <a href="{% url 'inventory:count_list' %}" class="btn btn-outline-primary">Inventarizatsiyalar</a>
+    <div>
+        <a href="{% url 'inventory:export' %}" class="btn btn-outline-success">Excel eksport</a>
+        <a href="{% url 'inventory:import' %}" class="btn btn-outline-success">Excel import</a>
+        <a href="{% url 'inventory:count_list' %}" class="btn btn-outline-primary">Inventarizatsiyalar</a>
+    </div>
 </div>
 
 <ul class="nav nav-tabs mb-3" id="invTabs" role="tablist">

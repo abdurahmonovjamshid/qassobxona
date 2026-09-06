@@ -22,7 +22,9 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
 
     Tannarx ikki bosqichda taqsimlanadi:
     1) Input mahsulot tannarxi (input_unit_cost * input_weight) output'larga
-       OG'IRLIK (kg) ulushi bo'yicha taqsimlanadi.
+       spetsifikatsiyada barcha output'lar uchun `cost_percentage` to'ldirilgan
+       bo'lsa shu % ulush bo'yicha, aks holda (eskicha) OG'IRLIK (kg) ulushi
+       bo'yicha taqsimlanadi.
     2) Bo'laklashga kiritilgan qo'shimcha xarajatlar (ButcheringExpense) esa
        output'larga SON (dona/bo'lak) ulushi bo'yicha taqsimlanadi.
     Ikkalasining yig'indisi output'ning yakuniy unit_cost'ini beradi.
@@ -53,9 +55,23 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
         created_by=user,
     )
 
-    # 2) tannarx taqsimoti: og'irlik ulushi (input) + son ulushi (qo'shimcha xarajat)
+    # 2) tannarx taqsimoti: input ulushi (og'irlik yoki spetsifikatsiya %) +
+    #    son ulushi (qo'shimcha xarajat)
     total_input_cost = input_unit_cost * butchering.input_weight
-    weight_allocations = allocate_proportionally(total_input_cost, outputs, lambda o: o.quantity)
+
+    pct_map = {}
+    if butchering.specification_id:
+        pct_map = {
+            item.child_product_id: item.cost_percentage
+            for item in butchering.specification.items.all()
+            if item.cost_percentage is not None
+        }
+    covered = bool(pct_map) and all(o.product_id in pct_map for o in outputs)
+    pct_sum = sum((pct_map[o.product_id] for o in outputs), Decimal('0')) if covered else Decimal('0')
+    use_percentage = covered and abs(pct_sum - Decimal('100')) <= Decimal('0.5')
+
+    input_weight_fn = (lambda o: pct_map[o.product_id]) if use_percentage else (lambda o: o.quantity)
+    weight_allocations = allocate_proportionally(total_input_cost, outputs, input_weight_fn)
 
     total_expenses = butchering.extra_expenses.aggregate(s=Sum('amount'))['s'] or Decimal('0')
     expense_allocations = allocate_proportionally(total_expenses, outputs, lambda o: o.pieces)

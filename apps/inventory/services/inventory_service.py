@@ -136,7 +136,13 @@ def _reference(count: InventoryCount) -> str:
 def confirm_inventory_count(count: InventoryCount, *, user=None) -> InventoryCount:
     """Inventarizatsiyani tasdiqlaydi: har bir mahsulot uchun tizim qoldig'i
     bilan hisoblangan qoldiq solishtirilib, farq ADJUSTMENT harakati bilan
-    to'g'irlanadi (kg va dona alohida yo'nalishda bo'lishi mumkin)."""
+    to'g'irlanadi (kg va dona alohida yo'nalishda bo'lishi mumkin).
+
+    Agar item'da `unit_cost` to'ldirilgan bo'lsa (masalan Excel import orqali),
+    tannarxni ham qayta belgilash uchun butun tizim qoldig'i chiqim qilinib,
+    hisoblangan qoldiq shu tannarx bilan qayta kirim qilinadi — farqgina emas,
+    to'liq miqdor (aks holda `unit_cost` yangi ADJUSTMENT-IN harakatiga
+    tegishli bo'lib, o'rtacha tannarxni to'liq almashtira olmas edi)."""
     if count.status != InventoryCount.Status.DRAFT:
         raise ValidationError('Faqat DRAFT holatidagi inventarizatsiyani tasdiqlash mumkin.')
 
@@ -154,27 +160,56 @@ def confirm_inventory_count(count: InventoryCount, *, user=None) -> InventoryCou
         item.diff_pieces = item.counted_pieces - system_pieces
         item.save(update_fields=['system_kg', 'system_pieces', 'diff_kg', 'diff_pieces'])
 
-        kg_in = item.diff_kg if item.diff_kg > 0 else Decimal('0')
-        kg_out = -item.diff_kg if item.diff_kg < 0 else Decimal('0')
-        pcs_in = item.diff_pieces if item.diff_pieces > 0 else 0
-        pcs_out = -item.diff_pieces if item.diff_pieces < 0 else 0
-
-        if kg_in > 0 or pcs_in > 0:
-            stock_in(
-                product=item.product, quantity=kg_in, pieces=pcs_in,
-                movement_type=StockMovement.MovementType.ADJUSTMENT,
-                reference=reference, date=count.date, created_by=user,
-            )
-        if kg_out > 0 or pcs_out > 0:
-            stock_out(
-                product=item.product, quantity=kg_out, pieces=pcs_out,
-                movement_type=StockMovement.MovementType.ADJUSTMENT,
-                reference=reference, date=count.date, created_by=user,
-            )
+        if item.unit_cost is not None:
+            _apply_recount_with_cost(item, system_kg, system_pieces, reference, count.date, user)
+        else:
+            _apply_diff_only(item, reference, count.date, user)
 
     count.status = InventoryCount.Status.CONFIRMED
     count.save(update_fields=['status', 'updated_at'])
     return count
+
+
+def _apply_diff_only(item, reference, date, user):
+    """Eskicha rejim: faqat kg/dona farqi ADJUSTMENT bilan to'g'irlanadi,
+    tannarxga tegilmaydi (qo'lda to'ldiriladigan Inventarizatsiya formasi)."""
+    kg_in = item.diff_kg if item.diff_kg > 0 else Decimal('0')
+    kg_out = -item.diff_kg if item.diff_kg < 0 else Decimal('0')
+    pcs_in = item.diff_pieces if item.diff_pieces > 0 else 0
+    pcs_out = -item.diff_pieces if item.diff_pieces < 0 else 0
+
+    if kg_in > 0 or pcs_in > 0:
+        stock_in(
+            product=item.product, quantity=kg_in, pieces=pcs_in,
+            movement_type=StockMovement.MovementType.ADJUSTMENT,
+            reference=reference, date=date, created_by=user,
+        )
+    if kg_out > 0 or pcs_out > 0:
+        stock_out(
+            product=item.product, quantity=kg_out, pieces=pcs_out,
+            movement_type=StockMovement.MovementType.ADJUSTMENT,
+            reference=reference, date=date, created_by=user,
+        )
+
+
+def _apply_recount_with_cost(item, system_kg, system_pieces, reference, date, user):
+    """Tannarx ham qayta belgilanadigan rejim: butun tizim qoldig'i chiqim
+    qilinib, hisoblangan (Excel/qo'lda kiritilgan) qoldiq yangi tannarx bilan
+    qayta kirim qilinadi. Bu shunchaki farqni emas, to'liq miqdorni
+    ko'chirgani uchun `get_weighted_average_cost` yangi qiymatga yaqinroq
+    (kichik/o'rtacha aylanma mahsulotlarda deyarli aniq) siljiydi."""
+    if system_kg > 0 or system_pieces > 0:
+        stock_out(
+            product=item.product, quantity=system_kg, pieces=system_pieces,
+            movement_type=StockMovement.MovementType.ADJUSTMENT,
+            reference=reference, date=date, created_by=user,
+        )
+    if item.counted_kg > 0 or item.counted_pieces > 0:
+        stock_in(
+            product=item.product, quantity=item.counted_kg, pieces=item.counted_pieces,
+            movement_type=StockMovement.MovementType.ADJUSTMENT,
+            unit_cost=item.unit_cost, reference=reference, date=date, created_by=user,
+        )
 
 
 def reverse_movements(*, reference, date=None, created_by=None) -> list:

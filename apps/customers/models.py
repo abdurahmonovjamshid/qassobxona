@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.db import models
+from django.db.models import Sum
 
 
 class Customer(models.Model):
@@ -27,3 +30,16 @@ class Customer(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_total_sales(self) -> Decimal:
+        from apps.sales.models import Sale
+        return self.sales.filter(status=Sale.Status.CONFIRMED).aggregate(
+            s=Sum('total_amount'))['s'] or Decimal('0')
+
+    def get_total_payments(self) -> Decimal:
+        return self.payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+
+    def get_total_debt(self) -> Decimal:
+        """Boshlang'ich saldo + jami sotuv - jami to'lov (sotuvga bog'liq
+        bo'lmagan umumiy to'lovlar ham hisobga olinadi)."""
+        return self.opening_balance + self.get_total_sales() - self.get_total_payments()

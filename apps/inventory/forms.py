@@ -43,3 +43,10 @@ InventoryCountItemFormSet = inlineformset_factory(
     InventoryCount, InventoryCountItem, form=InventoryCountItemForm,
     extra=6, can_delete=True, min_num=1, validate_min=True,
 )
+
+
+class InventoryImportForm(forms.Form):
+    file = forms.FileField(
+        label='Excel fayl (.xlsx)',
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.xlsx'}),
+    )

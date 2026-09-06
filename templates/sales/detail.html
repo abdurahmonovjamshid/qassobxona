@@ -29,6 +29,15 @@
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
         <div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ sale.debt_amount|floatformat:0|intcomma }}</div>
     </div></div></div>
+    {% if sale.due_date %}
+    <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">To'lov muddati</div>
+        <div class="stat-value fs-5 {% if sale.debt_amount > 0 and sale.due_date <= today %}text-danger{% endif %}">
+            {{ sale.due_date|date:"d.m.Y" }}
+            {% if sale.debt_amount > 0 and sale.due_date <= today %}<span class="badge bg-danger">Muddati keldi</span>{% endif %}
+        </div>
+    </div></div></div>
+    {% endif %}
 </div>
 
 <div class="card table-card mb-3">

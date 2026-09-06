@@ -19,31 +19,43 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Boshlang'ich saldo</div><div class="stat-value">{{ statement.opening_balance|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Yetkazib beruvchi balansi (bizning qarzimiz)</div>
+        <div class="stat-value {% if statement.supplier_statement.closing_balance > 0 %}text-danger{% endif %}">{{ statement.supplier_statement.closing_balance|floatformat:0|intcomma }}</div>
+    </div></div></div>
+    {% if statement.customer_statement %}
+    <div class="col-md-4"><div class="card stat-card"><div class="card-body">
+        <div class="stat-label">Mijoz balansi (bizga qarzi)</div>
+        <div class="stat-value {% if statement.customer_statement.closing_balance > 0 %}text-danger{% endif %}">{{ statement.customer_statement.closing_balance|floatformat:0|intcomma }}</div>
     </div></div></div>
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Yakuniy saldo</div><div class="stat-value {% if statement.closing_balance > 0 %}text-danger{% endif %}">{{ statement.closing_balance|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Sof balans (net)</div>
+        <div class="stat-value {% if statement.net_balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ statement.net_balance|floatformat:0|intcomma }}</div>
     </div></div></div>
+    {% endif %}
 </div>
 
 <div class="card table-card">
     <div class="table-responsive">
         <table class="table mb-0">
-            <thead><tr><th>Sana</th><th>Operatsiya</th><th class="text-end">Kirim</th><th class="text-end">Chiqim</th><th class="text-end">Balans</th></tr></thead>
+            <thead><tr><th>Sana</th><th>Operatsiya</th>{% if statement.customer_statement %}<th>Turkum</th>{% endif %}<th class="text-end">Kirim</th><th class="text-end">Chiqim</th><th class="text-end">Balans{% if statement.customer_statement %} (tomon bo'yicha){% endif %}</th></tr></thead>
             <tbody>
             {% for row in statement.rows %}
-                <tr>
+                <tr class="{% if row.side == 'supplier' %}table-warning{% endif %}">
                     <td>{{ row.date|date:"d.m.Y" }}</td>
                     <td>{{ row.op }}</td>
+                    {% if statement.customer_statement %}<td><span class="badge bg-secondary-subtle text-dark">{{ row.category }}</span></td>{% endif %}
                     <td class="text-end">{{ row.debit|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ row.credit|floatformat:0|intcomma }}</td>
                     <td class="text-end fw-semibold">{{ row.balance|floatformat:0|intcomma }}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="5" class="text-center text-muted py-4">Tranzaksiya yo'q.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Tranzaksiya yo'q.</td></tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+{% if statement.customer_statement %}
+<p class="text-muted small mt-2">Sariq fonli qatorlar — yetkazib beruvchi (xarid) tomonidagi harakatlar; ularning "Balans" ustuni shu tomonning o'z balansini ko'rsatadi.</p>
+{% endif %}
 {% endblock %}

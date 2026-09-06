@@ -31,6 +31,20 @@ def record_cash_in(*, amount, transaction_type, date, reference='', notes='', cr
     )
 
 
+def record_manual_balance(*, amount, date, notes='', created_by=None) -> CashTransaction:
+    """Superuser tomonidan kassa balansiga qo'lda naqd pul kiritish (masalan
+    dasturdan foydalanishni boshlaganda mavjud naqd qoldiqni belgilash uchun).
+    `amount` musbat bo'lsa kirim, manfiy bo'lsa chiqim sifatida yoziladi.
+    Bu yagona joy — bundan tashqari kassa faqat Sale/Purchase to'lovlari va
+    xarajatlar orqali avtomatik yoziladi."""
+    if amount is None or amount == 0:
+        raise ValidationError('Summa nolga teng bolmasligi kerak.')
+    return _create(
+        amount=amount, transaction_type=CashTransaction.TransactionType.OPENING,
+        date=date, notes=notes, created_by=created_by,
+    )
+
+
 def record_cash_out(*, amount, transaction_type, date, reference='', notes='', created_by=None,
                      enforce_balance=True) -> CashTransaction:
     if amount is None or amount <= 0:

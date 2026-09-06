@@ -32,7 +32,7 @@
                     <td>{{ spec.name }}</td>
                     <td>
                         {% for item in spec.items.all %}
-                            <span class="badge bg-secondary-subtle text-dark">{{ item.child_product.name }}</span>
+                            <span class="badge bg-secondary-subtle text-dark">{{ item.child_product.name }}{% if item.cost_percentage is not None %} — {{ item.cost_percentage }}%{% endif %}</span>
                         {% endfor %}
                     </td>
                     <td>{% if spec.active %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Nofaol</span>{% endif %}</td>

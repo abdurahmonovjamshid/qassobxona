@@ -1,5 +1,7 @@
+from decimal import Decimal
+
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import BaseInlineFormSet, inlineformset_factory
 
 from apps.butchering.models import (
     Butchering, ButcheringExpense, ButcheringOutput,
@@ -106,10 +108,14 @@ class ButcheringSpecificationForm(forms.ModelForm):
 class ButcheringSpecificationItemForm(forms.ModelForm):
     class Meta:
         model = ButcheringSpecificationItem
-        fields = ['child_product', 'order']
+        fields = ['child_product', 'order', 'cost_percentage']
         widgets = {
             'child_product': forms.Select(attrs={'class': 'form-select'}),
             'order': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0'}),
+            'cost_percentage': forms.NumberInput(attrs={
+                'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100',
+                'placeholder': "ixtiyoriy",
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -117,12 +123,47 @@ class ButcheringSpecificationItemForm(forms.ModelForm):
         self.fields['child_product'].queryset = Product.objects.filter(active=True)
         self.fields['order'].required = False
         self.fields['order'].initial = None
+        self.fields['cost_percentage'].required = False
 
     def clean_order(self):
         return self.cleaned_data.get('order') or 0
 
+    def clean_cost_percentage(self):
+        return self.cleaned_data.get('cost_percentage')
+
+
+class ButcheringSpecificationItemFormSetBase(BaseInlineFormSet):
+    """Chiqish qatorlaridagi `cost_percentage`larni tekshiradi: yoki barcha
+    qatorlarda to'ldirilib yig'indisi 100% ga teng bo'lishi, yoki hech
+    birida to'ldirilmasligi (eskicha kg-ulush rejimi) kerak."""
+
+    def clean(self):
+        super().clean()
+        percentages = []
+        any_filled = False
+        any_blank = False
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data') or form.cleaned_data.get('DELETE'):
+                continue
+            if not form.cleaned_data.get('child_product'):
+                continue
+            pct = form.cleaned_data.get('cost_percentage')
+            if pct is None:
+                any_blank = True
+            else:
+                any_filled = True
+                percentages.append(pct)
+
+        if any_filled and any_blank:
+            raise forms.ValidationError(
+                "Barcha qatorlar uchun % kiritilishi kerak yoki hech biriga kiritilmasligi kerak."
+            )
+        if any_filled and abs(sum(percentages, Decimal('0')) - Decimal('100')) > Decimal('0.5'):
+            raise forms.ValidationError("Tannarx % qatorlari yig'indisi 100% bo'lishi kerak.")
+
 
 ButcheringSpecificationItemFormSet = inlineformset_factory(
     ButcheringSpecification, ButcheringSpecificationItem, form=ButcheringSpecificationItemForm,
+    formset=ButcheringSpecificationItemFormSetBase,
     extra=4, can_delete=True, min_num=1, validate_min=True,
 )

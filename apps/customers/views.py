@@ -1,8 +1,5 @@
-from decimal import Decimal
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 
@@ -23,10 +20,8 @@ def customer_list(request):
 
     rows = []
     for customer in customers:
-        total_sales = customer.sales.filter(status=Sale.Status.CONFIRMED).aggregate(
-            s=Sum('total_amount'))['s'] or Decimal('0')
-        total_debt = customer.sales.filter(status=Sale.Status.CONFIRMED).aggregate(
-            s=Sum('debt_amount'))['s'] or Decimal('0')
+        total_sales = customer.get_total_sales()
+        total_debt = customer.get_total_debt()
         rows.append({'customer': customer, 'total_sales': total_sales, 'debt': total_debt})
 
     return render(request, 'customers/list.html', {'rows': rows})
@@ -66,11 +61,16 @@ def customer_detail(request, pk):
     sales = customer.sales.exclude(status=Sale.Status.CANCELLED)
     payments = customer.payments.all()
 
-    total_sales = sales.filter(status=Sale.Status.CONFIRMED).aggregate(s=Sum('total_amount'))['s'] or Decimal('0')
-    total_payments = payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
-    debt = sales.filter(status=Sale.Status.CONFIRMED).aggregate(s=Sum('debt_amount'))['s'] or Decimal('0')
+    total_sales = customer.get_total_sales()
+    total_payments = customer.get_total_payments()
+    debt = customer.get_total_debt()
 
     history = []
+    if customer.opening_balance:
+        history.append({
+            'date': customer.created_at.date(), 'op': "Boshlang'ich qarz",
+            'amount': customer.opening_balance, 'kind': 'opening',
+        })
     for sale in sales:
         history.append({'date': sale.date, 'op': f'Sotuv {sale.sale_number}', 'amount': sale.total_amount, 'kind': 'sale'})
     for payment in payments:

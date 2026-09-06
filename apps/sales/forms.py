@@ -22,15 +22,18 @@ class SaleForm(forms.ModelForm):
 
     class Meta:
         model = Sale
-        fields = ['customer', 'date']
+        fields = ['customer', 'date', 'due_date']
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-select d-none', 'data-role': 'customer-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['customer'].queryset = Customer.objects.filter(active=True)
+        self.fields['due_date'].required = False
+        self.fields['due_date'].label = "To'lov muddati"
 
 
 class SaleItemForm(forms.ModelForm):

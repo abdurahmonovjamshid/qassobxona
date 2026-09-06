@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Ombor — Excel import{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">📥 Ombor — Excel orqali import</h4>
+    <a href="{% url 'inventory:list' %}" class="btn btn-outline-secondary">Ortga</a>
+</div>
+
+<div class="card table-card mb-3">
+    <div class="card-body">
+        <ol class="mb-3">
+            <li><a href="{% url 'inventory:export' %}" class="btn btn-outline-primary btn-sm">Excel shablonini yuklab olish</a> — joriy ombor qoldig'i va tannarxi bilan.</li>
+            <li>Faylda <strong>Netto qoldiq (kg)</strong>, <strong>Dona</strong> va <strong>Tannarx (so'm/kg)</strong> ustunlarini to'g'irlang. <code>ID</code>, <code>Kod</code>, <code>Nomi</code> ustunlariga tegmang.</li>
+            <li>Tannarxni o'zgartirmoqchi bo'lmasangiz, shu qatordagi katakchani bo'sh qoldiring — faqat kg/dona farqi to'g'irlanadi.</li>
+            <li>To'g'irlangan faylni pastdan yuklang.</li>
+        </ol>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-6">
+                    {{ form.file }}
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-success">Import qilish</button>
+                </div>
+            </div>
+            {{ form.file.errors }}
+        </form>
+    </div>
+</div>
+
+<p class="text-muted small">Import qilinganda tizim buni yangi <a href="{% url 'inventory:count_list' %}">Inventarizatsiya</a> yozuvi sifatida saqlaydi — tarix va farqlarni shu yerdan ko'rish mumkin.</p>
+{% endblock %}

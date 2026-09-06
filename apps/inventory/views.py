@@ -7,9 +7,9 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.inventory.forms import InventoryCountForm, InventoryCountItemFormSet
-from apps.inventory.models import InventoryCount, StockMovement
-from apps.inventory.services import inventory_service
+from apps.inventory.forms import InventoryCountForm, InventoryCountItemFormSet, InventoryImportForm
+from apps.inventory.models import InventoryCount, InventoryCountItem, StockMovement
+from apps.inventory.services import excel_service, inventory_service
 from apps.products.models import Product
 
 
@@ -92,3 +92,44 @@ def inventory_count_detail(request, pk):
         'count': count,
         'items': count.items.select_related('product').all(),
     })
+
+
+@login_required
+def inventory_export(request):
+    return excel_service.export_inventory_workbook()
+
+
+@login_required
+def inventory_import(request):
+    if request.method == 'POST':
+        form = InventoryImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            rows, errors = excel_service.parse_inventory_workbook(form.cleaned_data['file'])
+            if errors:
+                for err in errors:
+                    messages.error(request, err)
+            else:
+                try:
+                    with transaction.atomic():
+                        count = InventoryCount.objects.create(
+                            date=timezone.localdate(),
+                            notes="Excel orqali import qilingan.",
+                            status=InventoryCount.Status.DRAFT,
+                            created_by=request.user,
+                        )
+                        for row in rows:
+                            InventoryCountItem.objects.create(
+                                count=count, product=row['product'],
+                                counted_kg=row['kg'], counted_pieces=row['pieces'],
+                                unit_cost=row['unit_cost'],
+                            )
+                        inventory_service.confirm_inventory_count(count, user=request.user)
+                    messages.success(
+                        request, f"{len(rows)} ta mahsulot Excel orqali yangilandi."
+                    )
+                    return redirect('inventory:count_detail', pk=count.pk)
+                except ValidationError as exc:
+                    messages.error(request, '; '.join(exc.messages))
+    else:
+        form = InventoryImportForm()
+    return render(request, 'inventory/import.html', {'form': form})

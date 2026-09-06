@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -30,6 +31,13 @@ class ButcheringSpecificationItem(models.Model):
         'products.Product', on_delete=models.PROTECT, related_name='specification_sources',
     )
     order = models.PositiveIntegerField(default=0)
+    cost_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Tannarxdan ulush %. Barcha qatorlar uchun to'ldirilsa, jami 100%% "
+                  "bo'lishi kerak. Bo'sh qoldirilsa, eskicha og'irlik (kg) ulushi "
+                  "bo'yicha taqsimlanadi.",
+    )
 
     class Meta:
         ordering = ['order', 'id']

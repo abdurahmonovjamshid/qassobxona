@@ -115,6 +115,7 @@ def sale_list(request):
         'statuses': Sale.Status.choices,
         'date_from': date_from,
         'date_to': date_to,
+        'today': timezone.localdate(),
     })
 
 
@@ -169,7 +170,13 @@ def sale_detail(request, pk):
         'sale': sale,
         'items': sale.items.select_related('product').all(),
         'payments': sale.payments.all(),
+        'today': timezone.localdate(),
     })
+
+
+@login_required
+def due_sales_view(request):
+    return render(request, 'sales/due.html', {'sales': sale_service.get_due_sales()})
 
 
 @login_required

@@ -20,7 +20,13 @@
                 {{ form.date }}{{ form.date.errors }}
             </div>
             <div class="col-md-3">
-                <label class="form-label">{{ form.paid_amount.label }}</label>
+                <label class="form-label d-flex justify-content-between align-items-center flex-wrap gap-1">
+                    <span>{{ form.paid_amount.label }}</span>
+                    <span class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" id="pay-half">50%</button>
+                        <button type="button" class="btn btn-outline-secondary" id="pay-full">Hammasi</button>
+                    </span>
+                </label>
                 {{ form.paid_amount }}
             </div>
             <div class="col-md-1">
@@ -75,7 +81,7 @@
                     <span class="fw-semibold">Mahsulotlar summasi:</span>
                     <span class="grand-total-box" id="items-total">0 so'm</span>
                 </div>
-                <button type="button" class="btn btn-outline-primary w-100" data-bs-dismiss="offcanvas">Qo'shimcha xarajatlarga o'tish</button>
+                <button type="submit" class="btn btn-success btn-lg w-100">XARIDNI TASDIQLASH</button>
             </div>
         </div>
     </div>

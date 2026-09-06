@@ -7,6 +7,7 @@ from django.db.models import Sum
 from django.shortcuts import render
 from django.utils import timezone
 
+from apps.customers.models import Customer
 from apps.expenses.models import Expense
 from apps.inventory.services import inventory_service
 from apps.kassa.services import cash_service
@@ -14,6 +15,7 @@ from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.purchases.models import Purchase
 from apps.sales.models import Sale, SaleItem
+from apps.suppliers.models import Supplier
 
 
 @login_required
@@ -29,10 +31,23 @@ def index(request):
     today_expenses = Expense.objects.filter(date=today).aggregate(s=Sum('amount'))['s'] or Decimal('0')
     today_net_profit = today_gross_profit - today_expenses
 
-    debitor_total = Sale.objects.filter(status=Sale.Status.CONFIRMED).aggregate(
-        s=Sum('debt_amount'))['s'] or Decimal('0')
-    creditor_total = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).aggregate(
-        s=Sum('debt_amount'))['s'] or Decimal('0')
+    # Qarz = boshlang'ich saldo + jami sotuv/xarid - jami to'lov (sotuv/xaridga
+    # bog'liq bo'lmagan umumiy to'lovlar ham hisobga olinadi). Har bir mijoz/
+    # supplierning `get_total_debt()` yig'indisiga teng, lekin bitta agregatsiya
+    # so'rovi bilan hisoblanadi.
+    customers_opening = Customer.objects.aggregate(s=Sum('opening_balance'))['s'] or Decimal('0')
+    total_sales_all = Sale.objects.filter(status=Sale.Status.CONFIRMED).aggregate(
+        s=Sum('total_amount'))['s'] or Decimal('0')
+    total_customer_payments_all = Payment.objects.filter(customer__isnull=False).aggregate(
+        s=Sum('amount'))['s'] or Decimal('0')
+    debitor_total = customers_opening + total_sales_all - total_customer_payments_all
+
+    suppliers_opening = Supplier.objects.aggregate(s=Sum('opening_balance'))['s'] or Decimal('0')
+    total_purchases_all = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).aggregate(
+        s=Sum('total_amount'))['s'] or Decimal('0')
+    total_supplier_payments_all = Payment.objects.filter(supplier__isnull=False).aggregate(
+        s=Sum('amount'))['s'] or Decimal('0')
+    creditor_total = suppliers_opening + total_purchases_all - total_supplier_payments_all
 
     customer_payments_today = Payment.objects.filter(
         date=today, customer__isnull=False).aggregate(s=Sum('amount'))['s'] or Decimal('0')
