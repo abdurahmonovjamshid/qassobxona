@@ -16,6 +16,7 @@
         <div class="text-end">
             <div class="text-muted small">Input vazn / soni</div>
             <div class="fs-4 fw-bold" id="input-weight-display">0.000 kg / 0 dona</div>
+            <div class="text-muted small mt-1" id="input-stock-display">Ombor qoldig'i: —</div>
         </div>
     </div>
 </div>
@@ -28,13 +29,18 @@
     <div class="card table-card mb-3">
         <div class="card-body row g-3">
             <div class="col-md-3">
-                <label class="form-label">Xarid (tasdiqlangan)</label>
+                <label class="form-label">Xarid (ixtiyoriy)</label>
                 {{ form.purchase }}{{ form.purchase.errors }}
-                <div class="form-text">Xaridni tanlasangiz, mahsulot va vazn avtomatik to'ldiriladi.</div>
+                <div class="form-text">Tanlasangiz, mahsulot va vazn avtomatik to'ldiriladi. Tanlamasangiz ham bo'laklash mumkin.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Input mahsulot</label>
-                {{ form.input_product }}{{ form.input_product.errors }}
+                <div class="picker" data-picker="input-product">
+                    <input type="text" class="form-control picker-search" autocomplete="off" placeholder="Mahsulot nomini yozing...">
+                    <div class="picker-results" style="display:none;"></div>
+                    {{ form.input_product }}
+                </div>
+                {{ form.input_product.errors }}
                 <div class="form-text">Faqat spetsifikatsiyasi mavjud mahsulotlar ko'rsatiladi.</div>
             </div>
             <div class="col-md-3">

@@ -56,7 +56,10 @@ class Butchering(models.Model):
         CONFIRMED = 'CONFIRMED', 'Confirmed'
         CANCELLED = 'CANCELLED', 'Cancelled'
 
-    purchase = models.ForeignKey('purchases.Purchase', on_delete=models.PROTECT, related_name='butcherings')
+    purchase = models.ForeignKey(
+        'purchases.Purchase', on_delete=models.PROTECT, related_name='butcherings',
+        null=True, blank=True,
+    )
     input_product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='butchering_inputs')
     specification = models.ForeignKey(
         ButcheringSpecification, on_delete=models.SET_NULL, null=True, blank=True,

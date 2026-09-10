@@ -17,7 +17,7 @@ class ButcheringForm(forms.ModelForm):
         fields = ['purchase', 'input_product', 'specification', 'input_weight', 'input_pieces', 'date', 'notes']
         widgets = {
             'purchase': forms.Select(attrs={'class': 'form-select', 'data-role': 'purchase-select'}),
-            'input_product': forms.Select(attrs={'class': 'form-select', 'data-role': 'input-product-select'}),
+            'input_product': forms.Select(attrs={'class': 'form-select d-none', 'data-role': 'input-product-select'}),
             'specification': forms.Select(attrs={'class': 'form-select', 'data-role': 'specification-select'}),
             'input_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0', 'data-role': 'input-weight'}),
             'input_pieces': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0', 'data-role': 'input-pieces'}),
@@ -28,6 +28,7 @@ class ButcheringForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['purchase'].queryset = Purchase.objects.filter(status=Purchase.Status.CONFIRMED)
+        self.fields['purchase'].required = False
         # Bo'laklashga faqat kamida bitta faol spetsifikatsiyaga ega
         # mahsulotlar chaqirilishi mumkin.
         self.fields['input_product'].queryset = Product.objects.filter(

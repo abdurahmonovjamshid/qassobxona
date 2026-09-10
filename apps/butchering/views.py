@@ -14,16 +14,20 @@ from apps.butchering.forms import (
 from apps.butchering.models import Butchering, ButcheringSpecification
 from apps.butchering.services import butchering_service
 from apps.common.date_filters import get_date_range
+from apps.inventory.services import inventory_service
 from apps.products.models import Product
 from apps.purchases.models import Purchase
 
 
 def _products_json():
     products = Product.objects.filter(active=True).select_related('category').order_by('name')
+    stock_map = inventory_service.get_all_stock()
+    pieces_map = inventory_service.get_all_stock_pieces()
     return json.dumps([
         {
             'id': p.id, 'name': p.name, 'image': p.image.url if p.image else None,
             'category': p.category.code, 'category_label': p.category.name,
+            'stock': str(stock_map.get(p.id, 0)), 'stock_pieces': pieces_map.get(p.id, 0),
         }
         for p in products
     ])

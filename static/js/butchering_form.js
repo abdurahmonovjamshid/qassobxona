@@ -20,8 +20,14 @@
         return `<div class="product-thumb-placeholder${cls}">🥩</div>`;
     }
 
+    // Ombor qoldig'ini "50.5" kabi bitta kasr xona bilan ko'rsatish uchun.
+    function formatStock(n) {
+        return (Math.round(n * 10) / 10).toFixed(1);
+    }
+
     window.ButcheringFormInit = function ({ products, purchases, specifications, initialOutputs, formsetPrefix, expenseFormsetPrefix }) {
         specifications = specifications || [];
+        const attachSearchPicker = window.attachSearchPicker;
         const purchaseSelect = document.querySelector('[data-role="purchase-select"]');
         const inputProductSelect = document.querySelector('[data-role="input-product-select"]');
         const specificationSelect = document.querySelector('[data-role="specification-select"]');
@@ -30,6 +36,12 @@
         const headerThumb = document.getElementById('input-product-thumb');
         const headerName = document.getElementById('input-product-name');
         const headerWeight = document.getElementById('input-weight-display');
+        const headerStock = document.getElementById('input-stock-display');
+
+        // Bo'laklashga faqat kamida bitta faol spetsifikatsiyaga ega
+        // mahsulotlar tanlanishi mumkin (backend queryset bilan mos).
+        const inputProductIds = new Set(specifications.map((s) => String(s.parent_product_id)));
+        const inputProducts = products.filter((p) => inputProductIds.has(String(p.id)));
         const outputTotalEl = document.getElementById('output-total');
         const diffTotalEl = document.getElementById('diff-total');
         const yieldTotalEl = document.getElementById('yield-total');
@@ -53,6 +65,43 @@
             const weight = parseFloat(inputWeightInput ? inputWeightInput.value : 0) || 0;
             const pieces = parseInt(inputPiecesInput ? inputPiecesInput.value : 0, 10) || 0;
             if (headerWeight) headerWeight.textContent = `${weight.toFixed(3)} kg / ${pieces} dona`;
+            if (headerStock) {
+                if (product) {
+                    const stock = parseFloat(product.stock) || 0;
+                    const stockPieces = parseInt(product.stock_pieces, 10) || 0;
+                    headerStock.textContent = `Ombor qoldig'i: ${formatStock(stock)} kg / ${stockPieces} dona`;
+                    if (inputWeightInput) inputWeightInput.max = stock;
+                    if (inputPiecesInput) inputPiecesInput.max = stockPieces;
+                } else {
+                    headerStock.textContent = "Ombor qoldig'i: —";
+                    if (inputWeightInput) inputWeightInput.removeAttribute('max');
+                    if (inputPiecesInput) inputPiecesInput.removeAttribute('max');
+                }
+            }
+        }
+
+        // Kiritilgan vazn/son ombor qoldig'idan oshib ketsa, qoldiqqa moslashtiradi.
+        function clampInputToStock() {
+            const product = inputProductSelect ? productById(products, inputProductSelect.value) : null;
+            if (!product) return;
+            const stock = parseFloat(product.stock) || 0;
+            const stockPieces = parseInt(product.stock_pieces, 10) || 0;
+            if (inputWeightInput) {
+                const weight = parseFloat(inputWeightInput.value) || 0;
+                if (weight > stock) {
+                    alert(`Omborda faqat ${formatStock(stock)} kg "${product.name}" bor. Vazn shunga moslashtirildi.`);
+                    inputWeightInput.value = stock;
+                }
+            }
+            if (inputPiecesInput) {
+                const pieces = parseInt(inputPiecesInput.value, 10) || 0;
+                if (pieces > stockPieces) {
+                    alert(`Omborda faqat ${stockPieces} dona "${product.name}" bor. Soni shunga moslashtirildi.`);
+                    inputPiecesInput.value = stockPieces;
+                }
+            }
+            updateHeader();
+            recalcOutputs();
         }
 
         function recalcOutputs() {
@@ -147,6 +196,13 @@
             }
         }
 
+        function handleInputProductChange() {
+            applyPurchaseItem();
+            refreshSpecificationOptions();
+            updateHeader();
+            clampInputToStock();
+        }
+
         if (purchaseSelect) {
             purchaseSelect.addEventListener('change', () => {
                 const purchase = purchases.find((p) => String(p.id) === String(purchaseSelect.value));
@@ -155,21 +211,37 @@
                     inputProductSelect.value = currentPurchaseItems[0].product_id;
                     if (inputWeightInput) inputWeightInput.value = currentPurchaseItems[0].net_weight;
                     if (inputPiecesInput) inputPiecesInput.value = currentPurchaseItems[0].pieces;
+                    const picker = document.querySelector('[data-picker="input-product"] .picker-search');
+                    const selectedProduct = productById(products, currentPurchaseItems[0].product_id);
+                    if (picker && selectedProduct) picker.value = selectedProduct.name;
                 }
+                refreshSpecificationOptions();
                 updateHeader();
+                clampInputToStock();
                 recalcOutputs();
             });
         }
 
-        if (inputProductSelect) {
-            inputProductSelect.addEventListener('change', () => {
-                applyPurchaseItem();
-                refreshSpecificationOptions();
-                updateHeader();
-            });
+        if (attachSearchPicker && inputProductSelect) {
+            const pickerRoot = document.querySelector('[data-picker="input-product"]');
+            if (pickerRoot) {
+                attachSearchPicker({
+                    root: pickerRoot, select: inputProductSelect, items: inputProducts,
+                    placeholder: 'Mahsulot nomini yozing...',
+                    matchText: (p) => p.name,
+                    renderItem: (p) => `<div><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>`,
+                    onSelect: handleInputProductChange,
+                });
+            }
         }
-        if (inputWeightInput) inputWeightInput.addEventListener('input', () => { updateHeader(); recalcOutputs(); });
-        if (inputPiecesInput) inputPiecesInput.addEventListener('input', updateHeader);
+        if (inputWeightInput) {
+            inputWeightInput.addEventListener('input', () => { updateHeader(); recalcOutputs(); });
+            inputWeightInput.addEventListener('change', clampInputToStock);
+        }
+        if (inputPiecesInput) {
+            inputPiecesInput.addEventListener('input', updateHeader);
+            inputPiecesInput.addEventListener('change', clampInputToStock);
+        }
 
         // --- Spetsifikatsiya (bo'laklash usuli) tanlash ---
         function refreshSpecificationOptions() {
