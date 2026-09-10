@@ -6,10 +6,12 @@ from django.utils import timezone
 
 from apps.butchering.forms import ButcheringSpecificationItemFormSet
 from apps.butchering.models import (
-    Butchering, ButcheringOutput, ButcheringSpecification, ButcheringSpecificationItem,
+    Butchering, ButcheringExpense, ButcheringOutput, ButcheringSpecification,
+    ButcheringSpecificationItem,
 )
 from apps.butchering.services import butchering_service
 from apps.inventory.services import inventory_service
+from apps.kassa.services import cash_service
 from apps.products.models import Product, ProductCategory
 from apps.purchases.models import Purchase
 from apps.suppliers.models import Supplier
@@ -93,6 +95,51 @@ class ButcheringCostAllocationTests(TestCase):
         suyak_output = butchering.outputs.get(product=self.suyak)
         self.assertEqual(lahm_output.unit_cost, Decimal('1000.00'))
         self.assertEqual(suyak_output.unit_cost, Decimal('1000.00'))
+
+
+class ButcheringCashRegisterTests(TestCase):
+    """Bo'laklash xarajatlari (ishchi kuchi, qadoqlash...) naqd deb
+    hisoblanadi va tasdiqlanganda kassadan chiqim, bekor qilinganda esa
+    kassaga qaytarilishi kerak."""
+
+    def setUp(self):
+        category = ProductCategory.objects.create(name='Go‘sht', code='meat3')
+        self.mol = Product.objects.create(name='Mol', code='MOL3', category=category)
+        self.lahm = Product.objects.create(name='Lahm', code='LAHM3', category=category)
+
+        inventory_service.stock_in(
+            product=self.mol, quantity=Decimal('100'), movement_type='PURCHASE',
+            unit_cost=Decimal('1000'), date=timezone.localdate(),
+        )
+        cash_service.record_manual_balance(amount=Decimal('1000000'), date=timezone.localdate())
+
+    def _make_butchering(self, expense_amount):
+        butchering = Butchering.objects.create(
+            input_product=self.mol, input_weight=Decimal('100'), date=timezone.localdate(),
+        )
+        ButcheringOutput.objects.create(butchering=butchering, product=self.lahm, quantity=Decimal('100'))
+        if expense_amount:
+            ButcheringExpense.objects.create(
+                butchering=butchering, expense_type=ButcheringExpense.ExpenseType.LABOR,
+                amount=expense_amount,
+            )
+        return butchering
+
+    def test_confirm_records_cash_out_for_expenses(self):
+        butchering = self._make_butchering(Decimal('50000'))
+        butchering_service.confirm_butchering(butchering)
+        self.assertEqual(cash_service.get_balance(), Decimal('950000'))
+
+    def test_cancel_reverses_cash_out(self):
+        butchering = self._make_butchering(Decimal('50000'))
+        butchering_service.confirm_butchering(butchering)
+        butchering_service.cancel_butchering(butchering)
+        self.assertEqual(cash_service.get_balance(), Decimal('1000000'))
+
+    def test_confirm_without_expenses_does_not_touch_cash(self):
+        butchering = self._make_butchering(None)
+        butchering_service.confirm_butchering(butchering)
+        self.assertEqual(cash_service.get_balance(), Decimal('1000000'))
 
 
 class ButcheringSpecificationFormsetValidationTests(TestCase):

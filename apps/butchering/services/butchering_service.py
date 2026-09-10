@@ -9,6 +9,8 @@ from apps.butchering.models import Butchering
 from apps.common.allocation import allocate_proportionally
 from apps.inventory.models import StockMovement
 from apps.inventory.services import inventory_service
+from apps.kassa.models import CashTransaction
+from apps.kassa.services import cash_service
 
 
 def _reference(butchering: Butchering) -> str:
@@ -76,6 +78,14 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
     total_expenses = butchering.extra_expenses.aggregate(s=Sum('amount'))['s'] or Decimal('0')
     expense_allocations = allocate_proportionally(total_expenses, outputs, lambda o: o.pieces)
 
+    # Bo'laklash xarajatlari (ishchi kuchi, qadoqlash...) naqd deb hisoblanadi
+    # va kassadan chiqim sifatida yoziladi.
+    if total_expenses > 0:
+        cash_service.record_cash_out(
+            amount=total_expenses, transaction_type=CashTransaction.TransactionType.EXPENSE,
+            date=butchering.date, reference=reference, created_by=user,
+        )
+
     for output in outputs:
         allocated_cost = weight_allocations.get(output, Decimal('0')) + expense_allocations.get(output, Decimal('0'))
         unit_cost = (allocated_cost / output.quantity) if output.quantity > 0 else Decimal('0')
@@ -110,11 +120,19 @@ def cancel_butchering(butchering: Butchering, *, user=None) -> Butchering:
     if butchering.status != Butchering.Status.CONFIRMED:
         raise ValidationError('Faqat CONFIRMED holatidagi bolaklashni bekor qilish mumkin.')
 
+    reference = _reference(butchering)
     inventory_service.reverse_movements(
-        reference=_reference(butchering),
+        reference=reference,
         date=butchering.date,
         created_by=user,
     )
+
+    total_expenses = butchering.extra_expenses.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+    if total_expenses > 0:
+        cash_service.record_cash_in(
+            amount=total_expenses, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
+            date=butchering.date, reference=f'REVERSE:{reference}', created_by=user,
+        )
 
     butchering.status = Butchering.Status.CANCELLED
     butchering.save(update_fields=['status', 'updated_at'])
