@@ -79,20 +79,6 @@ def _specifications_json():
     ])
 
 
-def _purchases_json():
-    purchases = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).prefetch_related('items')
-    return json.dumps([
-        {
-            'id': p.id,
-            'items': [
-                {'product_id': item.product_id, 'net_weight': str(item.net_weight), 'pieces': item.pieces}
-                for item in p.items.all()
-            ],
-        }
-        for p in purchases
-    ])
-
-
 @login_required
 def butchering_list(request):
     items = Butchering.objects.select_related('purchase', 'input_product').all()
@@ -143,7 +129,6 @@ def butchering_create(request):
         initial = {'date': timezone.localdate()}
         purchase_id = request.GET.get('purchase')
         if purchase_id:
-            initial['purchase'] = purchase_id
             purchase = Purchase.objects.filter(pk=purchase_id).prefetch_related('items').first()
             if purchase:
                 items = list(purchase.items.all())
@@ -159,7 +144,6 @@ def butchering_create(request):
     return render(request, 'butchering/form.html', {
         'form': form, 'formset': formset, 'expense_formset': expense_formset,
         'products_json': _products_json(),
-        'purchases_json': _purchases_json(),
         'specifications_json': _specifications_json(),
         'outputs_json': outputs_json,
     })

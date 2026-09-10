@@ -1,9 +1,9 @@
-// "Yangi bo'laklash" formasi: xarid tanlanganda mahsulot/vazn/soni avtomatik
-// to'ldiriladi, sarlavhada bo'laklanayotgan mahsulot ko'rinadi. Chiqish
-// (output) mahsulotlari sotuv/xarid sahifalaridagi kabi mahsulot
-// kartochkasi ko'rinishida chiqadi — spetsifikatsiya (bo'laklash usuli)
-// tanlanganda shu retseptdagi mahsulotlar uchun kartochkalar avtomatik
-// hosil bo'ladi, foydalanuvchi faqat kg/dona kiritadi. Submitda
+// "Yangi bo'laklash" formasi: input mahsulot qidiruvli tanlagich (picker.js)
+// orqali tanlanadi, sarlavhada bo'laklanayotgan mahsulot va ombor qoldig'i
+// ko'rinadi. Chiqish (output) mahsulotlari sotuv/xarid sahifalaridagi kabi
+// mahsulot kartochkasi ko'rinishida chiqadi — spetsifikatsiya (bo'laklash
+// usuli) tanlanganda shu retseptdagi mahsulotlar uchun kartochkalar
+// avtomatik hosil bo'ladi, foydalanuvchi faqat kg/dona kiritadi. Submitda
 // kartochkalar formset yashirin inputlariga sinxronlanadi.
 (function () {
     'use strict';
@@ -25,10 +25,20 @@
         return (Math.round(n * 10) / 10).toFixed(1);
     }
 
-    window.ButcheringFormInit = function ({ products, purchases, specifications, initialOutputs, formsetPrefix, expenseFormsetPrefix }) {
+    function renderProductPickerItem(p) {
+        return `<div><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>`;
+    }
+
+    // Mahsulot nomi bo'yicha VA kategoriya nomi bo'yicha ham qidirish mumkin
+    // bo'lishi uchun (masalan "sigir" deb yozilsa shu kategoriyadagi barcha
+    // mahsulotlar chiqadi) — inputga esa faqat mahsulot nomi yoziladi.
+    function productSearchText(p) {
+        return `${p.category_label || p.category || ''} ${p.name}`;
+    }
+
+    window.ButcheringFormInit = function ({ products, specifications, initialOutputs, formsetPrefix, expenseFormsetPrefix }) {
         specifications = specifications || [];
         const attachSearchPicker = window.attachSearchPicker;
-        const purchaseSelect = document.querySelector('[data-role="purchase-select"]');
         const inputProductSelect = document.querySelector('[data-role="input-product-select"]');
         const specificationSelect = document.querySelector('[data-role="specification-select"]');
         const inputWeightInput = document.querySelector('[data-role="input-weight"]');
@@ -184,42 +194,10 @@
             syncHiddenFormset();
         }
 
-        // --- Xarid tanlanganda mahsulot/vazn/soni avtomatik to'ldirish ---
-        let currentPurchaseItems = [];
-
-        function applyPurchaseItem() {
-            if (!inputProductSelect) return;
-            const match = currentPurchaseItems.find((it) => String(it.product_id) === String(inputProductSelect.value));
-            if (match) {
-                if (inputWeightInput) inputWeightInput.value = match.net_weight;
-                if (inputPiecesInput) inputPiecesInput.value = match.pieces;
-            }
-        }
-
         function handleInputProductChange() {
-            applyPurchaseItem();
             refreshSpecificationOptions();
             updateHeader();
             clampInputToStock();
-        }
-
-        if (purchaseSelect) {
-            purchaseSelect.addEventListener('change', () => {
-                const purchase = purchases.find((p) => String(p.id) === String(purchaseSelect.value));
-                currentPurchaseItems = purchase ? purchase.items : [];
-                if (currentPurchaseItems.length === 1 && inputProductSelect) {
-                    inputProductSelect.value = currentPurchaseItems[0].product_id;
-                    if (inputWeightInput) inputWeightInput.value = currentPurchaseItems[0].net_weight;
-                    if (inputPiecesInput) inputPiecesInput.value = currentPurchaseItems[0].pieces;
-                    const picker = document.querySelector('[data-picker="input-product"] .picker-search');
-                    const selectedProduct = productById(products, currentPurchaseItems[0].product_id);
-                    if (picker && selectedProduct) picker.value = selectedProduct.name;
-                }
-                refreshSpecificationOptions();
-                updateHeader();
-                clampInputToStock();
-                recalcOutputs();
-            });
         }
 
         if (attachSearchPicker && inputProductSelect) {
@@ -227,9 +205,10 @@
             if (pickerRoot) {
                 attachSearchPicker({
                     root: pickerRoot, select: inputProductSelect, items: inputProducts,
-                    placeholder: 'Mahsulot nomini yozing...',
+                    placeholder: 'Mahsulot yoki kategoriya nomini yozing...',
                     matchText: (p) => p.name,
-                    renderItem: (p) => `<div><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>`,
+                    searchText: productSearchText,
+                    renderItem: renderProductPickerItem,
                     onSelect: handleInputProductChange,
                 });
             }

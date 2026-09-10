@@ -28,22 +28,17 @@
     {% endif %}
     <div class="card table-card mb-3">
         <div class="card-body row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Xarid (ixtiyoriy)</label>
-                {{ form.purchase }}{{ form.purchase.errors }}
-                <div class="form-text">Tanlasangiz, mahsulot va vazn avtomatik to'ldiriladi. Tanlamasangiz ham bo'laklash mumkin.</div>
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label class="form-label">Input mahsulot</label>
                 <div class="picker" data-picker="input-product">
-                    <input type="text" class="form-control picker-search" autocomplete="off" placeholder="Mahsulot nomini yozing...">
+                    <input type="text" class="form-control picker-search" autocomplete="off" placeholder="Mahsulot yoki kategoriya nomini yozing...">
                     <div class="picker-results" style="display:none;"></div>
                     {{ form.input_product }}
                 </div>
                 {{ form.input_product.errors }}
                 <div class="form-text">Faqat spetsifikatsiyasi mavjud mahsulotlar ko'rsatiladi.</div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label class="form-label">Bo'laklash usuli (spetsifikatsiya)</label>
                 {{ form.specification }}{{ form.specification.errors }}
                 <div class="form-text">Tanlansa, output kartochkalari avtomatik chiqadi.</div>
@@ -56,7 +51,7 @@
                 <label class="form-label">Soni</label>
                 {{ form.input_pieces }}{{ form.input_pieces.errors }}
             </div>
-            <div class="col-md-1">
+            <div class="col-md-2">
                 <label class="form-label">Sana</label>
                 {{ form.date }}{{ form.date.errors }}
             </div>
@@ -153,12 +148,12 @@
 {% block extra_js %}
 {% load static %}
 <script src="{% static 'js/formset.js' %}"></script>
+<script src="{% static 'js/picker.js' %}"></script>
 <script src="{% static 'js/butchering_form.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         window.ButcheringFormInit({
             products: {{ products_json|safe }},
-            purchases: {{ purchases_json|safe }},
             specifications: {{ specifications_json|safe }},
             initialOutputs: {{ outputs_json|safe }},
             formsetPrefix: '{{ formset.prefix }}',
