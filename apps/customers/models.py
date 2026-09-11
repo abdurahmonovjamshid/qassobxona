@@ -37,7 +37,15 @@ class Customer(models.Model):
             s=Sum('total_amount'))['s'] or Decimal('0')
 
     def get_total_payments(self) -> Decimal:
-        return self.payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+        """Bekor qilingan sotuv/xaridga bog'langan to'lovlar hisobga
+        olinmaydi — aks holda bekor qilingan sotuvning to'lovi qarzni
+        haqiqatidan kamroq ko'rsatib qo'yardi."""
+        from apps.purchases.models import Purchase
+        from apps.sales.models import Sale
+        from django.db.models import Q
+        return self.payments.exclude(
+            Q(sale__status=Sale.Status.CANCELLED) | Q(purchase__status=Purchase.Status.CANCELLED)
+        ).aggregate(s=Sum('amount'))['s'] or Decimal('0')
 
     def get_total_debt(self) -> Decimal:
         """Boshlang'ich saldo + jami sotuv - jami to'lov (sotuvga bog'liq

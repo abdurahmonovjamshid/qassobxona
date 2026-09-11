@@ -5,8 +5,8 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Xarid {{ purchase.purchase_number }} <span class="badge badge-status-{{ purchase.status }}">{{ purchase.get_status_display }}</span></h4>
     <div>
-        <a href="{% url 'payments:create' %}?purchase={{ purchase.pk }}" class="btn btn-outline-primary">+ To'lov</a>
         {% if purchase.status == 'CONFIRMED' %}
+        <a href="{% url 'payments:create' %}?purchase={{ purchase.pk }}" class="btn btn-outline-primary">+ To'lov</a>
         <a href="{% url 'butchering:create' %}?purchase={{ purchase.pk }}" class="btn btn-outline-success">Bo'laklash</a>
         <form method="post" action="{% url 'purchases:cancel' purchase.pk %}" class="d-inline" onsubmit="return confirm('Xaridni bekor qilishni tasdiqlaysizmi?');">
             {% csrf_token %}
@@ -99,12 +99,22 @@
             <div class="card-header bg-white">To'lovlar tarixi</div>
             <div class="table-responsive">
                 <table class="table mb-0">
-                    <thead><tr><th>Sana</th><th>Turi</th><th class="text-end">Summa</th></tr></thead>
+                    <thead><tr><th>Sana</th><th>Turi</th><th class="text-end">Summa</th><th></th></tr></thead>
                     <tbody>
                     {% for payment in payments %}
-                        <tr><td>{{ payment.date|date:"d.m.Y" }}</td><td>{{ payment.get_payment_type_display }}</td><td class="text-end">{{ payment.amount|floatformat:0|intcomma }}</td></tr>
+                        <tr>
+                            <td>{{ payment.date|date:"d.m.Y" }}</td>
+                            <td>{{ payment.get_payment_type_display }}</td>
+                            <td class="text-end">{{ payment.amount|floatformat:0|intcomma }}</td>
+                            <td>
+                                <form method="post" action="{% url 'payments:cancel' payment.pk %}" onsubmit="return confirm('To\'lovni bekor qilishni tasdiqlaysizmi?');">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-danger">Bekor qilish</button>
+                                </form>
+                            </td>
+                        </tr>
                     {% empty %}
-                        <tr><td colspan="3" class="text-center text-muted py-3">To'lov yo'q</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted py-3">To'lov yo'q</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>

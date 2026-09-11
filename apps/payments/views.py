@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.common.date_filters import get_date_range
@@ -64,3 +64,26 @@ def payment_create(request):
         form = PaymentForm(initial=initial)
 
     return render(request, 'payments/form.html', {'form': form})
+
+
+@login_required
+def payment_cancel(request, pk):
+    payment = get_object_or_404(Payment, pk=pk)
+    if request.method == 'POST':
+        sale_id, purchase_id = payment.sale_id, payment.purchase_id
+        customer_id, supplier_id = payment.customer_id, payment.supplier_id
+        try:
+            payment_service.delete_payment(payment, user=request.user)
+            messages.success(request, "To'lov bekor qilindi.")
+        except ValidationError as exc:
+            messages.error(request, '; '.join(exc.messages))
+            return redirect('payments:list')
+        if sale_id:
+            return redirect('sales:detail', pk=sale_id)
+        if purchase_id:
+            return redirect('purchases:detail', pk=purchase_id)
+        if customer_id:
+            return redirect('customers:detail', pk=customer_id)
+        if supplier_id:
+            return redirect('suppliers:detail', pk=supplier_id)
+    return redirect('payments:list')
