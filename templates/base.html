@@ -14,10 +14,23 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'dashboard:index' %}">🥩 Qassobxona</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="mainNav">
+        <div class="d-flex align-items-center order-lg-3">
+            <a class="nav-link fs-5 position-relative text-white me-2" href="{% url 'sales:due' %}" title="To'lov muddati kelganlar">
+                🔔
+                {% if due_sales_count %}
+                    <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle" style="font-size:.6rem;">{{ due_sales_count }}</span>
+                {% endif %}
+            </a>
+            <a class="nav-link fs-5 text-white me-2" href="/admin/" title="Admin">⚙️</a>
+            <form method="post" action="{% url 'logout' %}" class="me-2">
+                {% csrf_token %}
+                <button class="btn btn-outline-light btn-sm" type="submit" title="Chiqish">🚪</button>
+            </form>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+        <div class="collapse navbar-collapse order-lg-2" id="mainNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:index' %}">Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'products:list' %}">Mahsulotlar</a></li>
@@ -31,23 +44,6 @@
                 <li class="nav-item"><a class="nav-link" href="{% url 'expenses:list' %}">Xarajatlar</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'kassa:detail' %}">Kassa</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'reports:index' %}">Hisobotlar</a></li>
-            </ul>
-            <ul class="navbar-nav align-items-lg-center">
-                <li class="nav-item">
-                    <a class="nav-link fs-5 position-relative" href="{% url 'sales:due' %}" title="To'lov muddati kelganlar">
-                        🔔
-                        {% if due_sales_count %}
-                            <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle" style="font-size:.6rem;">{{ due_sales_count }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                <li class="nav-item"><a class="nav-link fs-5" href="/admin/" title="Admin">⚙️</a></li>
-                <li class="nav-item">
-                    <form method="post" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button class="btn btn-outline-light btn-sm" type="submit" title="Chiqish">🚪</button>
-                    </form>
-                </li>
             </ul>
         </div>
     </div>
