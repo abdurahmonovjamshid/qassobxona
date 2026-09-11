@@ -4,27 +4,39 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 
 from apps.common.date_filters import get_date_range
-from apps.common.excel_export import statement_to_response
+from apps.common.excel_export import statement_to_response, table_to_response
 from apps.customers.forms import CustomerForm
 from apps.customers.models import Customer
 from apps.reports.services import statement_service
 from apps.sales.models import Sale
 
 
-@login_required
-def customer_list(request):
+def _filtered_customers(request):
     customers = Customer.objects.all()
     q = request.GET.get('q')
     if q:
         customers = customers.filter(name__icontains=q)
+    return customers
 
-    rows = []
-    for customer in customers:
-        total_sales = customer.get_total_sales()
-        total_debt = customer.get_total_debt()
-        rows.append({'customer': customer, 'total_sales': total_sales, 'debt': total_debt})
+
+@login_required
+def customer_list(request):
+    customers = _filtered_customers(request)
+
+    rows = [{'customer': customer, 'debt': customer.get_total_debt()} for customer in customers]
 
     return render(request, 'customers/list.html', {'rows': rows})
+
+
+@login_required
+def customer_list_export(request):
+    customers = _filtered_customers(request)
+    headers = ['Ism', 'Telefon', 'Qarz', 'Holat']
+    rows = [
+        [customer.name, customer.phone, float(customer.get_total_debt()), 'Faol' if customer.active else 'Nofaol']
+        for customer in customers
+    ]
+    return table_to_response(filename_prefix='mijozlar', headers=headers, rows=rows, sheet_title='Mijozlar')
 
 
 @login_required

@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from apps.common.date_filters import get_date_range
 from apps.customers.models import Customer
 from apps.products.models import Product
 from apps.reports.services import report_service
@@ -52,7 +53,7 @@ def creditor_report_view(request):
 
 @login_required
 def profit_report_view(request):
-    date_from = request.GET.get('date_from') or None
-    date_to = request.GET.get('date_to') or None
-    data = report_service.profit_report(date_from=date_from, date_to=date_to)
+    date_from, date_to = get_date_range(request)
+    data = report_service.profit_report(date_from=date_from or None, date_to=date_to or None)
+    data.update({'date_from': date_from, 'date_to': date_to})
     return render(request, 'reports/profit.html', data)

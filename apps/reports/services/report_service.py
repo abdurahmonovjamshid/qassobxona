@@ -113,10 +113,15 @@ def profit_report(*, date_from=None, date_to=None):
     expenses_total = expenses.aggregate(s=Sum('amount'))['s'] or ZERO
     net_profit = gross_profit - expenses_total
 
+    expenses_by_category = (
+        expenses.values('category__name').annotate(total=Sum('amount')).order_by('-total')
+    )
+
     return {
         'revenue': revenue,
         'cost': cost,
         'gross_profit': gross_profit,
         'expenses_total': expenses_total,
         'net_profit': net_profit,
+        'expenses_by_category': expenses_by_category,
     }

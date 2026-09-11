@@ -4,27 +4,39 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 
 from apps.common.date_filters import get_date_range
-from apps.common.excel_export import statement_to_response
+from apps.common.excel_export import statement_to_response, table_to_response
 from apps.purchases.models import Purchase
 from apps.reports.services import statement_service
 from apps.suppliers.forms import SupplierForm
 from apps.suppliers.models import Supplier
 
 
-@login_required
-def supplier_list(request):
+def _filtered_suppliers(request):
     suppliers = Supplier.objects.all()
     q = request.GET.get('q')
     if q:
         suppliers = suppliers.filter(name__icontains=q)
+    return suppliers
 
-    rows = []
-    for supplier in suppliers:
-        total_purchases = supplier.get_total_purchases()
-        total_debt = supplier.get_total_debt()
-        rows.append({'supplier': supplier, 'total_purchases': total_purchases, 'debt': total_debt})
+
+@login_required
+def supplier_list(request):
+    suppliers = _filtered_suppliers(request)
+
+    rows = [{'supplier': supplier, 'debt': supplier.get_total_debt()} for supplier in suppliers]
 
     return render(request, 'suppliers/list.html', {'rows': rows})
+
+
+@login_required
+def supplier_list_export(request):
+    suppliers = _filtered_suppliers(request)
+    headers = ['Nomi', 'Telefon', 'Qarz', 'Holat']
+    rows = [
+        [supplier.name, supplier.phone, float(supplier.get_total_debt()), 'Faol' if supplier.active else 'Nofaol']
+        for supplier in suppliers
+    ]
+    return table_to_response(filename_prefix='yetkazib_beruvchilar', headers=headers, rows=rows, sheet_title='Yetkazib beruvchilar')
 
 
 @login_required

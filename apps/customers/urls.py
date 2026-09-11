@@ -6,6 +6,7 @@ app_name = 'customers'
 
 urlpatterns = [
     path('', views.customer_list, name='list'),
+    path('export/', views.customer_list_export, name='list_export'),
     path('create/', views.customer_create, name='create'),
     path('<int:pk>/', views.customer_detail, name='detail'),
     path('<int:pk>/edit/', views.customer_update, name='update'),

@@ -6,6 +6,7 @@ app_name = 'suppliers'
 
 urlpatterns = [
     path('', views.supplier_list, name='list'),
+    path('export/', views.supplier_list_export, name='list_export'),
     path('create/', views.supplier_create, name='create'),
     path('<int:pk>/', views.supplier_detail, name='detail'),
     path('<int:pk>/edit/', views.supplier_update, name='update'),

@@ -5,16 +5,41 @@
 <h4 class="mb-3">Foyda hisoboti</h4>
 
 <form method="get" class="row g-2 mb-3">
-    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}"></div>
-    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>
     <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
 </form>
 
-<div class="row g-3">
-    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Revenue</div><div class="stat-value">{{ revenue|floatformat:0|intcomma }}</div></div></div></div>
-    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Cost</div><div class="stat-value">{{ cost|floatformat:0|intcomma }}</div></div></div></div>
-    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Gross Profit</div><div class="stat-value text-success">{{ gross_profit|floatformat:0|intcomma }}</div></div></div></div>
-    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Expenses</div><div class="stat-value text-warning">{{ expenses_total|floatformat:0|intcomma }}</div></div></div></div>
-    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Net Profit</div><div class="stat-value text-primary">{{ net_profit|floatformat:0|intcomma }}</div></div></div></div>
+<div class="row g-3 mb-3">
+    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Tushum</div><div class="stat-value">{{ revenue|floatformat:0|intcomma }}</div></div></div></div>
+    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Tannarx</div><div class="stat-value">{{ cost|floatformat:0|intcomma }}</div></div></div></div>
+    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Yalpi foyda</div><div class="stat-value text-success">{{ gross_profit|floatformat:0|intcomma }}</div></div></div></div>
+    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Xarajatlar</div><div class="stat-value text-warning">{{ expenses_total|floatformat:0|intcomma }}</div></div></div></div>
+    <div class="col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body"><div class="stat-label">Sof foyda</div><div class="stat-value text-primary">{{ net_profit|floatformat:0|intcomma }}</div></div></div></div>
+</div>
+
+<h6 class="mb-2">Xarajatlar (kategoriya bo'yicha)</h6>
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Kategoriya</th><th class="text-end">Summa</th></tr></thead>
+            <tbody>
+            {% for row in expenses_by_category %}
+                <tr>
+                    <td>{{ row.category__name }}</td>
+                    <td class="text-end">{{ row.total|floatformat:0|intcomma }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="2" class="text-center text-muted py-4">Xarajat yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold">
+                    <td>Jami</td>
+                    <td class="text-end">{{ expenses_total|floatformat:0|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 </div>
 {% endblock %}
