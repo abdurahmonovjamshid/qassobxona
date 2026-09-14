@@ -28,11 +28,14 @@
     <div class="col-12 col-md-auto">
         <a href="?all=1" class="btn btn-outline-secondary">Barchasi</a>
     </div>
+    <div class="col-12 col-md-3 ms-md-auto">
+        <input type="text" id="supplierSearch" class="form-control" placeholder="Yetkazib beruvchi nomi bo'yicha qidirish...">
+    </div>
 </form>
 
 <div class="card table-card">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
+        <table class="table table-hover mb-0 align-middle" id="purchasesTable">
             <thead>
             <tr>
                 <th>№</th><th>Sana</th><th>Yetkazib beruvchi</th><th>Mahsulotlar</th>
@@ -42,9 +45,9 @@
             </thead>
             <tbody>
             {% for purchase in purchases %}
-                <tr>
+                <tr data-name="{{ purchase.supplier.name|lower }}">
                     <td><a href="{% url 'purchases:detail' purchase.pk %}">{{ purchase.purchase_number }}</a></td>
-                    <td>{{ purchase.date|date:"d.m.Y" }}</td>
+                    <td>{{ purchase.date|date:"d.m.Y" }} <span class="text-muted small">{{ purchase.created_at|date:"H:i" }}</span></td>
                     <td>{{ purchase.supplier.name }}</td>
                     <td>
                         {% for item in purchase.items.all %}
@@ -69,4 +72,14 @@
         </table>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('supplierSearch').addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('#purchasesTable tbody tr[data-name]').forEach(function (row) {
+        row.style.display = row.dataset.name.indexOf(q) !== -1 ? '' : 'none';
+    });
+});
+</script>
 {% endblock %}

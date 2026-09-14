@@ -38,11 +38,14 @@ def _build(opening_balance, debit_events, credit_events, *, date_from=None, date
 def build_customer_statement(customer, *, date_from=None, date_to=None):
     from apps.sales.models import Sale
 
-    sales = customer.sales.filter(status=Sale.Status.CONFIRMED)
+    sales = customer.sales.filter(status=Sale.Status.CONFIRMED).prefetch_related('items__product')
     payments = customer.payments.all()
 
     debit_events = [
-        {'date': s.date, 'op': f'Sotuv {s.sale_number}', 'amount': s.total_amount, 'category': 'Sotuv'}
+        {
+            'date': s.date, 'op': f'Sotuv {s.sale_number}', 'amount': s.total_amount, 'category': 'Sotuv',
+            'sale_id': s.id, 'items': list(s.items.all()),
+        }
         for s in sales
     ]
     credit_events = [
@@ -55,11 +58,14 @@ def build_customer_statement(customer, *, date_from=None, date_to=None):
 def build_supplier_statement(supplier, *, date_from=None, date_to=None):
     from apps.purchases.models import Purchase
 
-    purchases = supplier.purchases.filter(status=Purchase.Status.CONFIRMED)
+    purchases = supplier.purchases.filter(status=Purchase.Status.CONFIRMED).prefetch_related('items__product')
     payments = supplier.payments.all()
 
     debit_events = [
-        {'date': p.date, 'op': f'Xarid {p.purchase_number}', 'amount': p.total_amount, 'category': 'Xarid'}
+        {
+            'date': p.date, 'op': f'Xarid {p.purchase_number}', 'amount': p.total_amount, 'category': 'Xarid',
+            'purchase_id': p.id, 'items': list(p.items.all()),
+        }
         for p in purchases
     ]
     credit_events = [

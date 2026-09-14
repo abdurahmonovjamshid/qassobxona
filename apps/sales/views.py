@@ -95,7 +95,7 @@ def _generate_sale_number():
 
 @login_required
 def sale_list(request):
-    sales = Sale.objects.select_related('customer').all()
+    sales = Sale.objects.select_related('customer').prefetch_related('items__product').all()
 
     customer_id = request.GET.get('customer')
     status = request.GET.get('status')

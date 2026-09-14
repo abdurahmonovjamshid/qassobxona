@@ -34,7 +34,18 @@
             {% for h in history %}
                 <tr>
                     <td>{{ h.date|date:"d.m.Y" }}</td>
-                    <td>{{ h.op }}</td>
+                    <td>
+                        {% if h.purchase_id %}
+                            <a href="{% url 'purchases:detail' h.purchase_id %}">{{ h.op }}</a>
+                        {% else %}
+                            {{ h.op }}
+                        {% endif %}
+                        {% if h.items %}
+                            <div class="small text-muted">
+                                {% for item in h.items %}{{ item.product.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
                     <td class="text-end {% if h.kind == 'payment' %}text-success{% endif %}">
                         {% if h.kind == 'payment' %}-{% else %}+{% endif %}{{ h.amount|floatformat:0|intcomma }}
                     </td>

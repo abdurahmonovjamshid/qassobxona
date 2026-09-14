@@ -70,7 +70,7 @@ def customer_update(request, pk):
 @login_required
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
-    sales = customer.sales.exclude(status=Sale.Status.CANCELLED)
+    sales = customer.sales.exclude(status=Sale.Status.CANCELLED).prefetch_related('items__product')
     payments = customer.payments.all()
 
     total_sales = customer.get_total_sales()
@@ -84,7 +84,10 @@ def customer_detail(request, pk):
             'amount': customer.opening_balance, 'kind': 'opening',
         })
     for sale in sales:
-        history.append({'date': sale.date, 'op': f'Sotuv {sale.sale_number}', 'amount': sale.total_amount, 'kind': 'sale'})
+        history.append({
+            'date': sale.date, 'op': f'Sotuv {sale.sale_number}', 'amount': sale.total_amount, 'kind': 'sale',
+            'sale_id': sale.id, 'items': list(sale.items.all()),
+        })
     for payment in payments:
         history.append({'date': payment.date, 'op': "To'lov", 'amount': payment.amount, 'kind': 'payment'})
     history.sort(key=lambda h: h['date'])

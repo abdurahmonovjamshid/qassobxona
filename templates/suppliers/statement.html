@@ -42,7 +42,20 @@
             {% for row in statement.rows %}
                 <tr class="{% if row.side == 'supplier' %}table-warning{% endif %}">
                     <td>{{ row.date|date:"d.m.Y" }}</td>
-                    <td>{{ row.op }}</td>
+                    <td>
+                        {% if row.purchase_id %}
+                            <a href="{% url 'purchases:detail' row.purchase_id %}">{{ row.op }}</a>
+                        {% elif row.sale_id %}
+                            <a href="{% url 'sales:detail' row.sale_id %}">{{ row.op }}</a>
+                        {% else %}
+                            {{ row.op }}
+                        {% endif %}
+                        {% if row.items %}
+                            <div class="small text-muted">
+                                {% for item in row.items %}{{ item.product.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
                     {% if statement.customer_statement %}<td><span class="badge bg-secondary-subtle text-dark">{{ row.category }}</span></td>{% endif %}
                     <td class="text-end">{{ row.debit|floatformat:0|intcomma }}</td>
                     <td class="text-end">{{ row.credit|floatformat:0|intcomma }}</td>

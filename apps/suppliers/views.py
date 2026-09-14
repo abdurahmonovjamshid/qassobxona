@@ -99,7 +99,7 @@ def supplier_statement_export(request, pk):
 @login_required
 def supplier_detail(request, pk):
     supplier = get_object_or_404(Supplier, pk=pk)
-    purchases = supplier.purchases.exclude(status=Purchase.Status.CANCELLED)
+    purchases = supplier.purchases.exclude(status=Purchase.Status.CANCELLED).prefetch_related('items__product')
     payments = supplier.payments.all()
 
     total_purchases = supplier.get_total_purchases()
@@ -113,7 +113,10 @@ def supplier_detail(request, pk):
             'amount': supplier.opening_balance, 'kind': 'opening',
         })
     for purchase in purchases:
-        history.append({'date': purchase.date, 'op': f'Xarid {purchase.purchase_number}', 'amount': purchase.total_amount, 'kind': 'purchase'})
+        history.append({
+            'date': purchase.date, 'op': f'Xarid {purchase.purchase_number}', 'amount': purchase.total_amount, 'kind': 'purchase',
+            'purchase_id': purchase.id, 'items': list(purchase.items.all()),
+        })
     for payment in payments:
         history.append({'date': payment.date, 'op': "To'lov", 'amount': payment.amount, 'kind': 'payment'})
     history.sort(key=lambda h: h['date'])
