@@ -52,7 +52,9 @@
                         {% endif %}
                         {% if row.items %}
                             <div class="small text-muted">
-                                {% for item in row.items %}{{ item.product.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                {% for item in row.items %}
+                                    <div>{{ item.product.name }} — {% if row.purchase_id %}{{ item.net_weight|floatformat:1 }}{% else %}{{ item.quantity|floatformat:1 }}{% endif %} kg{% if item.pieces %} ({{ item.pieces }} dona){% endif %}</div>
+                                {% endfor %}
                             </div>
                         {% endif %}
                     </td>
