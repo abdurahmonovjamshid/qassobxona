@@ -38,3 +38,23 @@ def telegram_webhook(request, token):
     # Telegram faqat 200 javobni kutadi; xatolik bo'lsa ham qayta urinishlarni
     # (retry storm) oldini olish uchun doim "ok" qaytariladi.
     return HttpResponse('ok')
+
+
+def _auto_set_webhook():
+    """PhoneAd-bot'dagi kabi: bu modul import qilinganda (ya'ni server har
+    reload bo'lganda — gunicorn/WSGI worker boot, `manage.py runserver`
+    va h.k.) webhook avtomatik qayta o'rnatiladi. TELEGRAM_BOT_TOKEN yoki
+    HOST sozlanmagan bo'lsa (masalan lokal muhitda .env to'liq emas)
+    jimgina o'tkazib yuboriladi; tarmoq xatosi ham butun ilovani
+    qulatmasligi uchun tutib olinadi."""
+    if not (settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_WEBHOOK_HOST):
+        return
+    try:
+        url = f'https://{settings.TELEGRAM_WEBHOOK_HOST}/bot/{settings.TELEGRAM_BOT_TOKEN}/webhook/'
+        bot.set_webhook(url=url)
+        logger.info("Telegram webhook o'rnatildi: %s", url)
+    except Exception:
+        logger.exception("Telegram webhook'ni avtomatik o'rnatishda xatolik")
+
+
+_auto_set_webhook()

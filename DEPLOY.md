@@ -171,16 +171,20 @@ os.environ['ADMINS'] = '7757735418'
 os.environ['HOST'] = '<username>.pythonanywhere.com'
 ```
 
-`migrate` va `collectstatic`dan keyin, bitta martalik buyruq bilan
-webhook'ni serverga ko'rsating:
+Webhook qo'lda o'rnatish shart emas — `apps/bot/views.py` import qilinganda
+(ya'ni har safar server/worker qayta ishga tushganda: **Reload** bosilganda,
+`gunicorn` qayta boshlanganda, `manage.py runserver` ishga tushganda)
+avtomatik `bot.set_webhook(...)` chaqiriladi (PhoneAd-bot'dagi kabi).
+`TELEGRAM_BOT_TOKEN`/`HOST` sozlanmagan bo'lsa jimgina o'tkazib yuboriladi,
+tarmoq xatosi bo'lsa ham butun sayt ishlashda davom etadi (xatolik faqat
+logga yoziladi).
+
+Shunday ham qo'lda qayta o'rnatish yoki o'chirish kerak bo'lsa:
 
 ```bash
-python manage.py set_webhook
+python manage.py set_webhook            # qayta o'rnatish
+python manage.py set_webhook --remove   # o'chirish
 ```
-
-("Webhook o'rnatildi: https://.../bot/<token>/webhook/" chiqishi kerak.)
-Bot manzili/tokeni o'zgarsa, shu buyruqni qayta ishga tushiring. O'chirish
-uchun: `python manage.py set_webhook --remove`.
 
 ---
 
