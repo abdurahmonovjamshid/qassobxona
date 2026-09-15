@@ -85,12 +85,7 @@ def _cart_json_from_formset(formset):
     return json.dumps(cart)
 
 
-def _generate_sale_number():
-    today = timezone.localdate()
-    prefix = f"S{today.strftime('%Y%m%d')}"
-    last = Sale.objects.filter(sale_number__startswith=prefix).order_by('-sale_number').first()
-    seq = int(last.sale_number.rsplit('-', 1)[-1]) + 1 if last else 1
-    return f"{prefix}-{seq:04d}"
+_generate_sale_number = sale_service.generate_sale_number
 
 
 @login_required

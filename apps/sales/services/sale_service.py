@@ -15,6 +15,14 @@ def _reference(sale: Sale) -> str:
     return f'SALE:{sale.sale_number}'
 
 
+def generate_sale_number() -> str:
+    today = timezone.localdate()
+    prefix = f"S{today.strftime('%Y%m%d')}"
+    last = Sale.objects.filter(sale_number__startswith=prefix).order_by('-sale_number').first()
+    seq = int(last.sale_number.rsplit('-', 1)[-1]) + 1 if last else 1
+    return f"{prefix}-{seq:04d}"
+
+
 @transaction.atomic
 def confirm_sale(sale: Sale, *, user=None) -> Sale:
     """Sotuvni tasdiqlaydi: har bir mahsulot ombordan chiqadi (yetarli bolmasa xato),

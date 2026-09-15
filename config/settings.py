@@ -13,8 +13,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Local ishlab chiqishda `.env`dan o'qiydi (TELEGRAM_BOT_TOKEN, ADMINS, HOST).
+# Production'da (PythonAnywhere WSGI fayli) bu qiymatlar allaqachon
+# os.environ'da o'rnatilgan bo'ladi — load_dotenv() ularni ustidan yozmaydi
+# (override=False standart).
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -77,7 +85,13 @@ INSTALLED_APPS = [
     'apps.kassa',
     'apps.reports',
     'apps.dashboard',
+    'apps.bot',
 ]
+
+# --- Telegram bot ---
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_ADMIN_IDS = [a.strip() for a in os.environ.get('ADMINS', '').split(',') if a.strip()]
+TELEGRAM_WEBHOOK_HOST = os.environ.get('HOST', '')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

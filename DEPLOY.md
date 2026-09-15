@@ -156,6 +156,34 @@ python manage.py collectstatic --noinput   # faqat static/CSS/JS o'zgarsa
 
 Keyin **Web** sahifasida **Reload** tugmasini bosish yetarli.
 
+## 10. Telegram bot
+
+Loyihada `apps/bot` — sayt bilan bir xil ma'lumotlarga ishlaydigan Telegram
+bot (`pyTelegramBotAPI`, webhook orqali). `.env`dagi (yoki quyida ko'rsatilgan
+WSGI o'zgaruvchilaridagi) `TELEGRAM_BOT_TOKEN`, `ADMINS` (vergul bilan
+ajratilgan Telegram ID'lar), `HOST` orqali ishlaydi.
+
+WSGI fayliga (6-bo'limdagi kabi) qo'shimcha uchta qator:
+
+```python
+os.environ['TELEGRAM_BOT_TOKEN'] = 'BOT_TOKEN_SHU_YERGA'
+os.environ['ADMINS'] = '7757735418'
+os.environ['HOST'] = '<username>.pythonanywhere.com'
+```
+
+`migrate` va `collectstatic`dan keyin, bitta martalik buyruq bilan
+webhook'ni serverga ko'rsating:
+
+```bash
+python manage.py set_webhook
+```
+
+("Webhook o'rnatildi: https://.../bot/<token>/webhook/" chiqishi kerak.)
+Bot manzili/tokeni o'zgarsa, shu buyruqni qayta ishga tushiring. O'chirish
+uchun: `python manage.py set_webhook --remove`.
+
+---
+
 ## Nazorat ro'yxati (xatolik chiqsa tekshiring)
 
 - `Web → Error log` — 500-xatolarning aniq sababi shu yerda ko'rinadi.

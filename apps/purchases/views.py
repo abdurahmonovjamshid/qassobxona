@@ -64,12 +64,7 @@ def _cart_json_from_formset(formset):
     return json.dumps(cart)
 
 
-def _generate_purchase_number():
-    today = timezone.localdate()
-    prefix = f"P{today.strftime('%Y%m%d')}"
-    last = Purchase.objects.filter(purchase_number__startswith=prefix).order_by('-purchase_number').first()
-    seq = int(last.purchase_number.rsplit('-', 1)[-1]) + 1 if last else 1
-    return f"{prefix}-{seq:04d}"
+_generate_purchase_number = purchase_service.generate_purchase_number
 
 
 @login_required

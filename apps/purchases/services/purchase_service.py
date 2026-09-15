@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
 from apps.common.allocation import allocate_proportionally
 from apps.inventory.models import StockMovement
@@ -13,6 +14,14 @@ from apps.purchases.models import Purchase
 
 def _reference(purchase: Purchase) -> str:
     return f'PURCHASE:{purchase.purchase_number}'
+
+
+def generate_purchase_number() -> str:
+    today = timezone.localdate()
+    prefix = f"P{today.strftime('%Y%m%d')}"
+    last = Purchase.objects.filter(purchase_number__startswith=prefix).order_by('-purchase_number').first()
+    seq = int(last.purchase_number.rsplit('-', 1)[-1]) + 1 if last else 1
+    return f"{prefix}-{seq:04d}"
 
 
 @transaction.atomic

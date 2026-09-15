@@ -30,6 +30,7 @@ urlpatterns = [
     path('expenses/', include('apps.expenses.urls')),
     path('kassa/', include('apps.kassa.urls')),
     path('reports/', include('apps.reports.urls')),
+    path('bot/', include('apps.bot.urls')),
 ]
 
 if settings.DEBUG:
