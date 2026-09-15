@@ -1,0 +1,19 @@
+{
+  "name": "qassobxona-mobile",
+  "version": "1.0.0",
+  "description": "Qassobxona — Android ilova (Capacitor WebView, Django saytini o'raydi)",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync android",
+    "open:android": "cap open android",
+    "build:debug": "cd android && gradlew.bat assembleDebug",
+    "build:release": "cd android && gradlew.bat assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

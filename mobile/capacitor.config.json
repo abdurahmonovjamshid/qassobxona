@@ -1,0 +1,9 @@
+{
+  "appId": "uz.qassobxona.app",
+  "appName": "Qassobxona",
+  "webDir": "www",
+  "server": {
+    "url": "https://qassobxona.pythonanywhere.com",
+    "cleartext": false
+  }
+}
