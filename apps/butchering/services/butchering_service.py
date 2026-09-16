@@ -111,6 +111,10 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
     ).quantize(Decimal('0.01'))
     butchering.status = Butchering.Status.CONFIRMED
     butchering.save()
+
+    from apps.bot.admin_notify import notify_new_butchering
+    transaction.on_commit(lambda: notify_new_butchering(butchering, user=user))
+
     return butchering
 
 

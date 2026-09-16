@@ -131,7 +131,9 @@ class Command(BaseCommand):
         today = timezone.localdate()
         start_date = today - timedelta(days=max(PURCHASE_DAY_OFFSETS) + 3)
 
-        with transaction.atomic():
+        from apps.bot.admin_notify import suppressed as admin_notify_suppressed
+
+        with admin_notify_suppressed(), transaction.atomic():
             self._wipe_business_data()
             products = self._create_products()
             specs = self._create_specifications(products)

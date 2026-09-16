@@ -62,6 +62,10 @@ def confirm_sale(sale: Sale, *, user=None) -> Sale:
     sale.total_amount = total
     sale.status = Sale.Status.CONFIRMED
     sale.save()
+
+    from apps.bot.admin_notify import notify_new_sale
+    transaction.on_commit(lambda: notify_new_sale(sale, user=user))
+
     return sale
 
 

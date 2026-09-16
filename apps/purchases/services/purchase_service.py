@@ -65,6 +65,10 @@ def confirm_purchase(purchase: Purchase, *, user=None) -> Purchase:
     purchase.total_amount = total
     purchase.status = Purchase.Status.CONFIRMED
     purchase.save()
+
+    from apps.bot.admin_notify import notify_new_purchase
+    transaction.on_commit(lambda: notify_new_purchase(purchase, user=user))
+
     return purchase
 
 
