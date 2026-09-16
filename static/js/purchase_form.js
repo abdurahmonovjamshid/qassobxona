@@ -41,22 +41,13 @@
         // xaridning supplierga qarzi ham shu summadan iborat (qo'shimcha
         // xarajatlar supplierga emas, tannarxga qo'shiladi).
         let currentItemsTotal = 0;
-        // Foydalanuvchi to'lov maydonini o'zi tahrirlagach (yoki tugma bosgach),
-        // avtomatik to'ldirish to'xtaydi — aks holda uning kiritgan qiymati
-        // ustidan yozib yuborilmasligi kerak.
-        let paidAmountTouched = paidAmountInput ? parseFloat(paidAmountInput.value || '0') !== 0 : true;
-        if (paidAmountInput) {
-            paidAmountInput.addEventListener('input', () => { paidAmountTouched = true; });
-        }
         if (payFullBtn) {
             payFullBtn.addEventListener('click', () => {
-                paidAmountTouched = true;
                 if (paidAmountInput) paidAmountInput.value = Math.round(currentItemsTotal);
             });
         }
         if (payHalfBtn) {
             payHalfBtn.addEventListener('click', () => {
-                paidAmountTouched = true;
                 if (paidAmountInput) paidAmountInput.value = Math.round(currentItemsTotal / 2);
             });
         }
@@ -180,7 +171,6 @@
             itemsTotalEls.forEach((el) => { if (el) el.textContent = formatMoney(sum) + " so'm"; });
             if (cartBarTotal) cartBarTotal.textContent = formatMoney(sum);
             if (cartBarCount) cartBarCount.textContent = `${cart.length} mahsulot`;
-            if (paidAmountInput && !paidAmountTouched) paidAmountInput.value = Math.round(sum);
             if (window.PurchaseFormRecalcGrandTotal) window.PurchaseFormRecalcGrandTotal();
             renderCatalog();
             return sum;
