@@ -14,8 +14,8 @@ from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.formatters import errors_to_text, som
 from apps.bot.handlers.common import register_menu
-from apps.bot.inputs import is_skip, parse_date, parse_decimal, parse_int
-from apps.bot.pickers import register_pagination, send_picker
+from apps.bot.inputs import is_skip, parse_decimal, parse_int
+from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.services import payment_service
 from apps.sales.models import Sale, SaleItem
@@ -50,37 +50,34 @@ def pick_customer(call, tg_user):
     customer = Customer.objects.get(pk=customer_id)
     bot.answer_callback_query(call.id, customer.name)
     set_state(tg_user, 'sale.date', customer_id=customer_id, customer_name=customer.name)
-    bot.send_message(
-        call.message.chat.id, "Sotuv sanasi? ('bugun' yoki 31.01.2026 ko'rinishida)",
-        reply_markup=keyboards.cancel_only(),
+    send_calendar(call.message.chat.id, 's_date', 'Sotuv sanasi?')
+
+
+def _on_date_picked(call, tg_user, picked):
+    set_state(tg_user, 'sale.due_date', date=picked.isoformat())
+    from telebot import types
+    send_calendar(
+        call.message.chat.id, 's_due', "To'lov muddati (qarzga sotilsa)?",
+        extra_rows=[[types.InlineKeyboardButton("🚫 Muddat yo'q", callback_data='s_due_none:1')]],
     )
 
 
-@register_state('sale.date')
-def on_date(message, tg_user):
-    d = parse_date(message.text)
-    if d is None:
-        bot.send_message(message.chat.id, "Sana tushunarsiz. Masalan: 'bugun' yoki 31.01.2026")
-        return
-    set_state(tg_user, 'sale.due_date', date=d.isoformat())
-    bot.send_message(
-        message.chat.id, "To'lov muddati (qarzga sotilsa)? (ixtiyoriy, sana ko'rinishida)",
-        reply_markup=keyboards.cancel_and_skip(),
-    )
+register_calendar('s_date', _on_date_picked)
 
 
-@register_state('sale.due_date')
-def on_due_date(message, tg_user):
-    if is_skip(message.text):
-        due_date = None
-    else:
-        d = parse_date(message.text)
-        if d is None:
-            bot.send_message(message.chat.id, "Sana tushunarsiz. Qayta kiriting yoki o'tkazib yuboring:")
-            return
-        due_date = d.isoformat()
-    set_state(tg_user, 'sale.picking_item', due_date=due_date)
-    send_picker(message.chat.id, 's_prod', choices.active_products_with_stock(), 'Mahsulotni tanlang:')
+def _on_due_date_picked(call, tg_user, picked):
+    set_state(tg_user, 'sale.picking_item', due_date=picked.isoformat())
+    send_picker(call.message.chat.id, 's_prod', choices.active_products_with_stock(), 'Mahsulotni tanlang:')
+
+
+register_calendar('s_due', _on_due_date_picked)
+
+
+@register_callback('s_due_none')
+def pick_no_due_date(call, tg_user):
+    bot.answer_callback_query(call.id)
+    set_state(tg_user, 'sale.picking_item', due_date=None)
+    send_picker(call.message.chat.id, 's_prod', choices.active_products_with_stock(), 'Mahsulotni tanlang:')
 
 
 @register_callback('s_prod')

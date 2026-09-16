@@ -1,6 +1,8 @@
 """Bir nechta modulda takrorlanadigan "ro'yxatdan tanlash" UI'sini
 markazlashtiradi: dastlabki xabar yuborish va sahifalash (pagination)
 callback'ini ro'yxatdan o'tkazish."""
+from datetime import date
+
 from apps.bot import keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.state import register_callback
@@ -32,3 +34,34 @@ def register_pagination(prefix, items_fn):
         bot.answer_callback_query(call.id)
 
     return _paginate
+
+
+def send_calendar(chat_id, prefix, title, extra_rows=None):
+    today = date.today()
+    return bot.send_message(
+        chat_id, title,
+        reply_markup=keyboards.calendar_keyboard(prefix, today.year, today.month, extra_rows=extra_rows),
+    )
+
+
+def register_calendar(prefix, on_pick, extra_rows=None):
+    """Oy grid'idan sana tanlashni ro'yxatdan o'tkazadi: oldinga/orqaga
+    (`{prefix}_nav`) — xabar shu joyida tahrirlanadi, kun tanlash
+    (`{prefix}`) — `on_pick(call, tg_user, picked_date)` chaqiriladi."""
+
+    @register_callback(f'{prefix}_nav')
+    def _nav(call, tg_user):
+        year, month = (int(part) for part in call.data.split(':', 1)[1].split('-'))
+        bot.edit_message_reply_markup(
+            call.message.chat.id, call.message.message_id,
+            reply_markup=keyboards.calendar_keyboard(prefix, year, month, extra_rows=extra_rows),
+        )
+        bot.answer_callback_query(call.id)
+
+    @register_callback(prefix)
+    def _pick(call, tg_user):
+        picked = date.fromisoformat(call.data.split(':', 1)[1])
+        bot.answer_callback_query(call.id)
+        on_pick(call, tg_user, picked)
+
+    return _pick

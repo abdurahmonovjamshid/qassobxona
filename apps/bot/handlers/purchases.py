@@ -16,8 +16,8 @@ from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.formatters import errors_to_text, som
 from apps.bot.handlers.common import register_menu
-from apps.bot.inputs import is_skip, parse_date, parse_decimal, parse_int
-from apps.bot.pickers import register_pagination, send_picker
+from apps.bot.inputs import is_skip, parse_decimal, parse_int
+from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.services import payment_service
 from apps.purchases.models import Purchase, PurchaseExpense, PurchaseItem
@@ -58,21 +58,15 @@ def pick_supplier(call, tg_user):
     supplier = Supplier.objects.get(pk=supplier_id)
     bot.answer_callback_query(call.id, supplier.name)
     set_state(tg_user, 'purchase.date', supplier_id=supplier_id, supplier_name=supplier.name)
-    bot.send_message(
-        call.message.chat.id,
-        "Xarid sanasi? ('bugun' yoki 31.01.2026 ko'rinishida)",
-        reply_markup=keyboards.cancel_only(),
-    )
+    send_calendar(call.message.chat.id, 'p_date', 'Xarid sanasi?')
 
 
-@register_state('purchase.date')
-def on_date(message, tg_user):
-    d = parse_date(message.text)
-    if d is None:
-        bot.send_message(message.chat.id, "Sana tushunarsiz. Masalan: 'bugun' yoki 31.01.2026")
-        return
-    set_state(tg_user, 'purchase.picking_item', date=d.isoformat())
-    send_picker(message.chat.id, 'p_iprod', choices.active_products(), 'Mahsulotni tanlang:')
+def _on_date_picked(call, tg_user, picked):
+    set_state(tg_user, 'purchase.picking_item', date=picked.isoformat())
+    send_picker(call.message.chat.id, 'p_iprod', choices.active_products(), 'Mahsulotni tanlang:')
+
+
+register_calendar('p_date', _on_date_picked)
 
 
 @register_callback('p_iprod')

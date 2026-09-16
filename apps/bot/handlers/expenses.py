@@ -12,8 +12,8 @@ from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.formatters import errors_to_text, som
 from apps.bot.handlers.common import register_menu
-from apps.bot.inputs import is_skip, parse_date, parse_decimal
-from apps.bot.pickers import register_pagination, send_picker
+from apps.bot.inputs import is_skip, parse_decimal
+from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.expenses.models import Expense
 from apps.kassa.models import CashTransaction
@@ -65,24 +65,15 @@ def pick_payment_type(call, tg_user):
     code = call.data.split(':', 1)[1]
     bot.answer_callback_query(call.id)
     set_state(tg_user, 'expense.date', payment_type=code)
-    bot.send_message(
-        call.message.chat.id, "Sana? ('bugun' yoki 31.01.2026, o'tkazib yuborish = bugun)",
-        reply_markup=keyboards.cancel_and_skip(),
-    )
+    send_calendar(call.message.chat.id, 'exp_date', 'Sana?')
 
 
-@register_state('expense.date')
-def on_date(message, tg_user):
-    from django.utils import timezone
-    if is_skip(message.text):
-        d = timezone.localdate()
-    else:
-        d = parse_date(message.text)
-        if d is None:
-            bot.send_message(message.chat.id, "Sana tushunarsiz. Qayta kiriting yoki o'tkazib yuboring:")
-            return
-    set_state(tg_user, 'expense.description', date=d.isoformat())
-    bot.send_message(message.chat.id, 'Izoh? (ixtiyoriy)', reply_markup=keyboards.cancel_and_skip())
+def _on_date_picked(call, tg_user, picked):
+    set_state(tg_user, 'expense.description', date=picked.isoformat())
+    bot.send_message(call.message.chat.id, 'Izoh? (ixtiyoriy)', reply_markup=keyboards.cancel_and_skip())
+
+
+register_calendar('exp_date', _on_date_picked)
 
 
 @register_state('expense.description')

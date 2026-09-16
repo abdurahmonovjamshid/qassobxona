@@ -71,6 +71,10 @@ def on_callback(call):
         send_main_menu(call.message.chat.id, 'Bekor qilindi.')
         return
 
+    if call.data.startswith('noop:'):
+        bot.answer_callback_query(call.id)
+        return
+
     if dispatch_callback(call, tg_user):
         # Har bir callback handler o'zi bot.answer_callback_query(call.id, ...)
         # chaqiradi (ba'zan matnli toast bilan) — bu yerda qayta chaqirilmaydi,

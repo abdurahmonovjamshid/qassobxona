@@ -16,8 +16,8 @@ from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.formatters import errors_to_text, kg, som
 from apps.bot.handlers.common import register_menu
-from apps.bot.inputs import is_skip, parse_date, parse_decimal, parse_int
-from apps.bot.pickers import register_pagination, send_picker
+from apps.bot.inputs import is_skip, parse_decimal, parse_int
+from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.butchering.models import Butchering, ButcheringExpense, ButcheringOutput
 from apps.butchering.services import butchering_service
@@ -108,17 +108,15 @@ def pick_specification(call, tg_user):
 
 def _ask_date(chat_id, tg_user):
     set_state(tg_user, 'butch.date')
-    bot.send_message(chat_id, "Sana? ('bugun' yoki 31.01.2026 ko'rinishida)", reply_markup=keyboards.cancel_only())
+    send_calendar(chat_id, 'b_date', 'Sana?')
 
 
-@register_state('butch.date')
-def on_date(message, tg_user):
-    d = parse_date(message.text)
-    if d is None:
-        bot.send_message(message.chat.id, "Sana tushunarsiz. Masalan: 'bugun' yoki 31.01.2026")
-        return
-    set_state(tg_user, 'butch.picking_output', date=d.isoformat())
-    send_picker(message.chat.id, 'b_oprod', choices.active_products(), 'Chiqadigan mahsulotni tanlang:')
+def _on_date_picked(call, tg_user, picked):
+    set_state(tg_user, 'butch.picking_output', date=picked.isoformat())
+    send_picker(call.message.chat.id, 'b_oprod', choices.active_products(), 'Chiqadigan mahsulotni tanlang:')
+
+
+register_calendar('b_date', _on_date_picked)
 
 
 @register_callback('b_oprod')

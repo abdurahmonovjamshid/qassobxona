@@ -1,7 +1,8 @@
 """Foydalanuvchi matn kiritmalarini parslash yordamchilari — hamma joyda bir
-xil qabul qilinadigan formatlar uchun (sana, pul/vazn, butun son)."""
+xil qabul qilinadigan formatlar uchun (pul/vazn, butun son). Sana endi
+matndan emas, inline calendar keyboard orqali tanlanadi (bot/keyboards.py
+`calendar_keyboard`, bot/pickers.py `send_calendar`/`register_calendar`)."""
 import re
-from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 _NUM_CLEAN_RE = re.compile(r'[^0-9.,-]')
@@ -25,18 +26,6 @@ def parse_int(text):
     if value is None:
         return None
     return int(value)
-
-
-def parse_date(text):
-    text = (text or '').strip().lower()
-    if text in ('bugun', 'today', "hozir"):
-        return date.today()
-    for fmt in ('%d.%m.%Y', '%d/%m/%Y', '%Y-%m-%d'):
-        try:
-            return datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-    return None
 
 
 def is_skip(text) -> bool:

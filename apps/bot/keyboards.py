@@ -3,6 +3,9 @@ ko'rinadigan "Bekor qilish"/"O'tkazib yuborish" kabi tugmalar uchun, inline
 klaviaturalar esa ro'yxatdan tanlash (mijoz/mahsulot/supplier) va
 tasdiqlash/bekor qilish uchun ishlatiladi (PhoneAd-bot'dagi
 `step_keyboard()`/`models_keyboard(page)` uslubiga o'xshash)."""
+import calendar as calendar_module
+from datetime import date
+
 from telebot import types
 
 CANCEL_TEXT = "❌ Bekor qilish"
@@ -72,6 +75,43 @@ def picker(prefix, items, page=0, page_size=8, extra_rows=None):
         nav.append(types.InlineKeyboardButton('➡️', callback_data=f'{prefix}_pg:{page + 1}'))
     if nav:
         kb.row(*nav)
+    for row in (extra_rows or []):
+        kb.row(*row)
+    return kb
+
+
+MONTH_NAMES_UZ = [
+    'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+    'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr',
+]
+WEEKDAY_LABELS_UZ = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya']
+
+
+def calendar_keyboard(prefix, year=None, month=None, extra_rows=None):
+    """Oy grid'i: har bir kun `{prefix}:{YYYY-MM-DD}`, oy almashtirish
+    `{prefix}_nav:{YYYY-MM}`, bo'sh/sarlavha katakchalari `noop:cal`
+    callback_data bilan (dispatcher bularni indamay javob beradi)."""
+    today = date.today()
+    year = year or today.year
+    month = month or today.month
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
+
+    kb = types.InlineKeyboardMarkup(row_width=7)
+    kb.row(
+        types.InlineKeyboardButton('◀️', callback_data=f'{prefix}_nav:{prev_year}-{prev_month:02d}'),
+        types.InlineKeyboardButton(f'{MONTH_NAMES_UZ[month - 1]} {year}', callback_data='noop:cal'),
+        types.InlineKeyboardButton('▶️', callback_data=f'{prefix}_nav:{next_year}-{next_month:02d}'),
+    )
+    kb.row(*[types.InlineKeyboardButton(w, callback_data='noop:cal') for w in WEEKDAY_LABELS_UZ])
+    for week in calendar_module.Calendar(firstweekday=0).monthdayscalendar(year, month):
+        kb.row(*[
+            types.InlineKeyboardButton(
+                str(day) if day else ' ',
+                callback_data=f'{prefix}:{year}-{month:02d}-{day:02d}' if day else 'noop:cal',
+            )
+            for day in week
+        ])
     for row in (extra_rows or []):
         kb.row(*row)
     return kb
