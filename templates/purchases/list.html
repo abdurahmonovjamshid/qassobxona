@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Xaridlar{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -53,15 +53,15 @@
                         {% for item in purchase.items.all %}
                             <div class="d-flex align-items-center gap-2 small">
                                 {% include "partials/product_thumb.html" with product=item.product %}
-                                <span>{{ item.product.name }} — {{ item.net_weight|floatformat:1 }} kg</span>
+                                <span>{{ item.product.name }} — {{ item.net_weight|uzqty }} kg</span>
                             </div>
                         {% empty %}
                             <span class="text-muted small">Mahsulot yo'q</span>
                         {% endfor %}
                     </td>
-                    <td class="text-end">{{ purchase.total_amount|floatformat:0|intcomma }}</td>
-                    <td class="text-end text-success">{{ purchase.paid_amount|floatformat:0|intcomma }}</td>
-                    <td class="text-end {% if purchase.debt_amount > 0 %}text-danger{% endif %}">{{ purchase.debt_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ purchase.total_amount|uzsum }}</td>
+                    <td class="text-end text-success">{{ purchase.paid_amount|uzsum }}</td>
+                    <td class="text-end {% if purchase.debt_amount > 0 %}text-danger{% endif %}">{{ purchase.debt_amount|uzsum }}</td>
                     <td><span class="badge badge-status-{{ purchase.status }}">{{ purchase.get_status_display }}</span></td>
                     <td><a href="{% url 'purchases:detail' purchase.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
                 </tr>

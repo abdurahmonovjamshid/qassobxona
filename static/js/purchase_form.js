@@ -134,7 +134,7 @@
                         ${img}
                         <div class="card-body p-2">
                             <div class="product-card-name"><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>
-                            ${inCartLines.length > 0 ? `<div class="product-card-in-cart">Tanlangan: ${inCartNet.toFixed(3)} kg, ${inCartPieces} dona</div>` : ''}
+                            ${inCartLines.length > 0 ? `<div class="product-card-in-cart">Tanlangan: ${window.formatQty(inCartNet)} kg, ${inCartPieces} dona</div>` : ''}
                             <div class="d-flex flex-wrap gap-1 mt-2">
                                 <input type="number" class="form-control form-control-sm catalog-net" inputmode="decimal" step="0.001" min="0" placeholder="Netto kg">
                                 <input type="number" class="form-control form-control-sm catalog-pieces" inputmode="numeric" step="1" min="0" placeholder="Soni">

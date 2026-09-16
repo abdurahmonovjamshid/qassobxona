@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Kreditor hisoboti{% endblock %}
 {% block content %}
 <h4 class="mb-3">Kreditor hisoboti (yetkazib beruvchilarga qarz)</h4>
@@ -12,7 +12,7 @@
                 <tr>
                     <td><a href="{% url 'suppliers:detail' row.supplier.pk %}">{{ row.supplier.name }}</a></td>
                     <td>{{ row.supplier.phone }}</td>
-                    <td class="text-end text-danger fw-bold">{{ row.debt|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-danger fw-bold">{{ row.debt|uzsum }}</td>
                 </tr>
             {% empty %}
                 <tr><td colspan="3" class="text-center text-muted py-4">Qarzdorlik yo'q.</td></tr>

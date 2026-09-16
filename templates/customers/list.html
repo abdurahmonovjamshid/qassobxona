@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Mijozlar{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -24,7 +24,7 @@
                 <tr>
                     <td><a href="{% url 'customers:detail' row.customer.pk %}">{{ row.customer.name }}</a></td>
                     <td>{{ row.customer.phone }}</td>
-                    <td class="text-end {% if row.debt > 0 %}text-danger{% endif %}">{{ row.debt|floatformat:0|intcomma }}</td>
+                    <td class="text-end {% if row.debt > 0 %}text-danger{% endif %}">{{ row.debt|uzsum }}</td>
                     <td>{% if row.customer.active %}<span class="badge bg-success">Faol</span>{% else %}<span class="badge bg-secondary">Nofaol</span>{% endif %}</td>
                     <td><a href="{% url 'customers:detail' row.customer.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
                 </tr>

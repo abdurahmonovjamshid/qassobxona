@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}To'lovlar{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -39,7 +39,7 @@
                         {% if p.sale %}<a href="{% url 'sales:detail' p.sale.pk %}">{{ p.sale.sale_number }}</a>{% if p.sale.status == 'CANCELLED' %} <span class="badge bg-secondary">bekor qilingan</span>{% endif %}{% endif %}
                         {% if p.purchase %}<a href="{% url 'purchases:detail' p.purchase.pk %}">{{ p.purchase.purchase_number }}</a>{% if p.purchase.status == 'CANCELLED' %} <span class="badge bg-secondary">bekor qilingan</span>{% endif %}{% endif %}
                     </td>
-                    <td class="text-end">{{ p.amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ p.amount|uzsum }}</td>
                     <td>
                         <form method="post" action="{% url 'payments:cancel' p.pk %}" onsubmit="return confirm('To\'lovni bekor qilishni tasdiqlaysizmi?');">
                             {% csrf_token %}

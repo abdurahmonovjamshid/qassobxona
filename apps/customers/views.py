@@ -86,7 +86,7 @@ def customer_detail(request, pk):
     for sale in sales:
         history.append({
             'date': sale.date, 'op': f'Sotuv {sale.sale_number}', 'amount': sale.total_amount, 'kind': 'sale',
-            'sale_id': sale.id, 'items': list(sale.items.all()),
+            'sale_id': sale.id, 'line_items': list(sale.items.all()),
         })
     for payment in payments:
         history.append({'date': payment.date, 'op': "To'lov", 'amount': payment.amount, 'kind': 'payment'})

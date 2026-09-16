@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load uz_numbers %}
 {% block title %}Bo'laklash{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -42,10 +43,10 @@
                     <td>{{ b.date|date:"d.m.Y" }}</td>
                     <td>{{ b.purchase.purchase_number }}</td>
                     <td>{{ b.input_product.name }}</td>
-                    <td class="text-end">{{ b.input_weight|floatformat:3 }}</td>
-                    <td class="text-end">{{ b.output_weight|floatformat:3 }}</td>
-                    <td class="text-end">{{ b.difference|floatformat:3 }}</td>
-                    <td class="text-end">{{ b.yield_percentage|floatformat:2 }}%</td>
+                    <td class="text-end">{{ b.input_weight|uzqty }}</td>
+                    <td class="text-end">{{ b.output_weight|uzqty }}</td>
+                    <td class="text-end">{{ b.difference|uzqty }}</td>
+                    <td class="text-end">{{ b.yield_percentage|uzqty }}%</td>
                     <td><span class="badge badge-status-{{ b.status }}">{{ b.get_status_display }}</span></td>
                     <td><a href="{% url 'butchering:detail' b.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
                 </tr>

@@ -20,10 +20,7 @@
         return `<div class="product-thumb-placeholder${cls}">🥩</div>`;
     }
 
-    // Ombor qoldig'ini "50.5" kabi bitta kasr xona bilan ko'rsatish uchun.
-    function formatStock(n) {
-        return (Math.round(n * 10) / 10).toFixed(1);
-    }
+    const formatStock = window.formatQty;
 
     function renderProductPickerItem(p) {
         return `<div><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>`;
@@ -74,7 +71,7 @@
             if (headerName) headerName.textContent = product ? product.name : 'Mahsulot tanlanmagan';
             const weight = parseFloat(inputWeightInput ? inputWeightInput.value : 0) || 0;
             const pieces = parseInt(inputPiecesInput ? inputPiecesInput.value : 0, 10) || 0;
-            if (headerWeight) headerWeight.textContent = `${weight.toFixed(3)} kg / ${pieces} dona`;
+            if (headerWeight) headerWeight.textContent = `${formatStock(weight)} kg / ${pieces} dona`;
             if (headerStock) {
                 if (product) {
                     const stock = parseFloat(product.stock) || 0;
@@ -122,14 +119,14 @@
             const diff = inputWeight - outputTotal;
             const yieldPct = inputWeight > 0 ? (outputTotal / inputWeight) * 100 : 0;
 
-            if (outputTotalEl) outputTotalEl.textContent = `${outputTotal.toFixed(3)} kg / ${piecesTotal} dona`;
+            if (outputTotalEl) outputTotalEl.textContent = `${formatStock(outputTotal)} kg / ${piecesTotal} dona`;
             if (diffTotalEl) {
-                diffTotalEl.textContent = diff.toFixed(3) + ' kg';
+                diffTotalEl.textContent = formatStock(diff) + ' kg';
                 diffTotalEl.classList.toggle('text-danger', diff < 0);
                 diffTotalEl.classList.toggle('text-success', diff >= 0);
             }
             if (yieldTotalEl) {
-                yieldTotalEl.textContent = yieldPct.toFixed(1) + '%';
+                yieldTotalEl.textContent = formatStock(yieldPct) + '%';
                 yieldTotalEl.classList.toggle('text-danger', diff < 0);
             }
         }
@@ -267,7 +264,7 @@
                 total += parseFloat(el.value) || 0;
             });
             const el = document.getElementById('butchering-expenses-total');
-            if (el) el.textContent = total.toLocaleString('uz-UZ') + " so'm";
+            if (el) el.textContent = window.formatMoney(total) + " so'm";
         }
         const expenseRows = document.getElementById('expense-rows');
         if (expenseRows) {

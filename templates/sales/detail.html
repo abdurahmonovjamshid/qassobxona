@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Sotuv {{ sale.sale_number }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -21,13 +21,13 @@
         <div class="stat-label">Mijoz</div><div class="stat-value fs-5">{{ sale.customer.name }}</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Jami</div><div class="stat-value">{{ sale.total_amount|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Jami</div><div class="stat-value">{{ sale.total_amount|uzsum }}</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">To'langan</div><div class="stat-value text-success">{{ sale.paid_amount|floatformat:0|intcomma }}</div>
+        <div class="stat-label">To'langan</div><div class="stat-value text-success">{{ sale.paid_amount|uzsum }}</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ sale.debt_amount|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ sale.debt_amount|uzsum }}</div>
     </div></div></div>
     {% if sale.due_date %}
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
@@ -50,12 +50,12 @@
                 <tr>
                     <td>{% include "partials/product_thumb.html" with product=item.product %}</td>
                     <td>{{ item.product.name }}</td>
-                    <td class="text-end">{{ item.quantity|floatformat:3 }} kg</td>
+                    <td class="text-end">{{ item.quantity|uzqty }} kg</td>
                     <td class="text-end">{{ item.pieces }} dona</td>
-                    <td class="text-end">{{ item.price|floatformat:0|intcomma }}</td>
-                    <td class="text-end">{{ item.discount|floatformat:0|intcomma }}</td>
-                    <td class="text-end">{{ item.total|floatformat:0|intcomma }}</td>
-                    <td class="text-end">{{ item.profit|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ item.price|uzsum }}</td>
+                    <td class="text-end">{{ item.discount|uzsum }}</td>
+                    <td class="text-end">{{ item.total|uzsum }}</td>
+                    <td class="text-end">{{ item.profit|uzsum }}</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -73,7 +73,7 @@
                 <tr>
                     <td>{{ payment.date|date:"d.m.Y" }}</td>
                     <td>{{ payment.get_payment_type_display }}</td>
-                    <td class="text-end">{{ payment.amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ payment.amount|uzsum }}</td>
                     <td>
                         <form method="post" action="{% url 'payments:cancel' payment.pk %}" onsubmit="return confirm('To\'lovni bekor qilishni tasdiqlaysizmi?');">
                             {% csrf_token %}

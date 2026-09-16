@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Yangi xarajat{% endblock %}
 {% block content %}
 <h4 class="mb-3">Yangi xarajat</h4>
-<div class="alert alert-info" style="max-width: 500px;">Kassadagi joriy balans: <strong>{{ cash_balance|floatformat:0|intcomma }} so'm</strong></div>
+<div class="alert alert-info" style="max-width: 500px;">Kassadagi joriy balans: <strong>{{ cash_balance|uzsum }} so'm</strong></div>
 <form method="post" class="card table-card p-4" style="max-width: 500px;">
     {% csrf_token %}
     <div class="mb-3"><label class="form-label">Kategoriya</label>{{ form.category }}{{ form.category.errors }}</div>

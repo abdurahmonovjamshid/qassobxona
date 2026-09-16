@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -18,10 +18,10 @@
         <div class="stat-label">Kategoriya</div><div class="stat-value">{{ product.category.name }}</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Sotuv narxi</div><div class="stat-value">{{ product.sale_price|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Sotuv narxi</div><div class="stat-value">{{ product.sale_price|uzsum }}</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Ombor qoldig'i</div><div class="stat-value">{{ stock|floatformat:3 }} kg / {{ stock_pieces }} dona</div>
+        <div class="stat-label">Ombor qoldig'i</div><div class="stat-value">{{ stock|uzqty }} kg / {{ stock_pieces }} dona</div>
     </div></div></div>
 </div>
 

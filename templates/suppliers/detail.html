@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}{{ supplier.name }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -15,13 +15,13 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Jami xarid</div><div class="stat-value">{{ total_purchases|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Jami xarid</div><div class="stat-value">{{ total_purchases|uzsum }}</div>
     </div></div></div>
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Jami to'lov</div><div class="stat-value text-success">{{ total_payments|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Jami to'lov</div><div class="stat-value text-success">{{ total_payments|uzsum }}</div>
     </div></div></div>
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ debt|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Qarz</div><div class="stat-value text-danger">{{ debt|uzsum }}</div>
     </div></div></div>
 </div>
 
@@ -40,16 +40,16 @@
                         {% else %}
                             {{ h.op }}
                         {% endif %}
-                        {% if h.items %}
+                        {% if h.line_items %}
                             <div class="small text-muted">
-                                {% for item in h.items %}
-                                    <div>{{ item.product.name }} — {{ item.net_weight|floatformat:1 }} kg{% if item.pieces %} ({{ item.pieces }} dona){% endif %}</div>
+                                {% for item in h.line_items %}
+                                    <div>{{ item.product.name }} — {{ item.net_weight|uzqty }} kg{% if item.pieces %} ({{ item.pieces }} dona){% endif %}</div>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </td>
                     <td class="text-end {% if h.kind == 'payment' %}text-success{% endif %}">
-                        {% if h.kind == 'payment' %}-{% else %}+{% endif %}{{ h.amount|floatformat:0|intcomma }}
+                        {% if h.kind == 'payment' %}-{% else %}+{% endif %}{{ h.amount|uzsum }}
                     </td>
                 </tr>
             {% empty %}

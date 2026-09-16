@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Ombor{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -28,9 +28,9 @@
                             <td>{% include "partials/product_thumb.html" with product=row.product %}</td>
                             <td>{{ row.product.name }}</td>
                             <td>{{ row.product.category.name }}</td>
-                            <td class="text-end {% if row.quantity <= 0 %}text-danger{% endif %}">{{ row.quantity|floatformat:3 }} kg</td>
+                            <td class="text-end {% if row.quantity <= 0 %}text-danger{% endif %}">{{ row.quantity|uzqty }} kg</td>
                             <td class="text-end">{{ row.pieces }} dona</td>
-                            <td class="text-end">{{ row.avg_cost|floatformat:0|intcomma }}</td>
+                            <td class="text-end">{{ row.avg_cost|uzsum }}</td>
                         </tr>
                     {% empty %}
                         <tr><td colspan="6" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
@@ -73,9 +73,9 @@
                             <td>{{ m.product.name }}</td>
                             <td>{{ m.get_movement_type_display }}</td>
                             <td>{% if m.direction == 'IN' %}<span class="text-success">Kirim</span>{% else %}<span class="text-danger">Chiqim</span>{% endif %}</td>
-                            <td class="text-end">{{ m.quantity|floatformat:3 }}</td>
+                            <td class="text-end">{{ m.quantity|uzqty }}</td>
                             <td class="text-end">{{ m.pieces }}</td>
-                            <td class="text-end">{{ m.unit_cost|floatformat:0|intcomma }}</td>
+                            <td class="text-end">{{ m.unit_cost|uzsum }}</td>
                             <td class="small text-muted">{{ m.reference }}</td>
                         </tr>
                     {% empty %}

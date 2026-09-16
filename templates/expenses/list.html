@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Xarajatlar{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -9,7 +9,7 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Kassadagi balans</div><div class="stat-value {% if cash_balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ cash_balance|floatformat:0|intcomma }}</div>
+        <div class="stat-label">Kassadagi balans</div><div class="stat-value {% if cash_balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ cash_balance|uzsum }}</div>
     </div></div></div>
 </div>
 
@@ -39,7 +39,7 @@
                     <td>{{ e.category.name }}</td>
                     <td>{{ e.get_payment_type_display }}</td>
                     <td>{{ e.description }}</td>
-                    <td class="text-end">{{ e.amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ e.amount|uzsum }}</td>
                 </tr>
             {% empty %}
                 <tr><td colspan="5" class="text-center text-muted py-4">Xarajat yo'q.</td></tr>

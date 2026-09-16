@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Sotuvlar{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -52,15 +52,15 @@
                         {% for item in sale.items.all %}
                             <div class="d-flex align-items-center gap-2 small">
                                 {% include "partials/product_thumb.html" with product=item.product %}
-                                <span>{{ item.product.name }} — {{ item.quantity|floatformat:1 }} kg</span>
+                                <span>{{ item.product.name }} — {{ item.quantity|uzqty }} kg</span>
                             </div>
                         {% empty %}
                             <span class="text-muted small">Mahsulot yo'q</span>
                         {% endfor %}
                     </td>
-                    <td class="text-end">{{ sale.total_amount|floatformat:0|intcomma }}</td>
-                    <td class="text-end">{{ sale.paid_amount|floatformat:0|intcomma }}</td>
-                    <td class="text-end">{{ sale.debt_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ sale.total_amount|uzsum }}</td>
+                    <td class="text-end">{{ sale.paid_amount|uzsum }}</td>
+                    <td class="text-end">{{ sale.debt_amount|uzsum }}</td>
                     <td>
                         {% if sale.due_date %}
                             <span class="{% if sale.debt_amount > 0 and sale.due_date <= today %}text-danger fw-semibold{% endif %}">{{ sale.due_date|date:"d.m.Y" }}</span>

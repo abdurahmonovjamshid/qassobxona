@@ -115,7 +115,7 @@ def supplier_detail(request, pk):
     for purchase in purchases:
         history.append({
             'date': purchase.date, 'op': f'Xarid {purchase.purchase_number}', 'amount': purchase.total_amount, 'kind': 'purchase',
-            'purchase_id': purchase.id, 'items': list(purchase.items.all()),
+            'purchase_id': purchase.id, 'line_items': list(purchase.items.all()),
         })
     for payment in payments:
         history.append({'date': payment.date, 'op': "To'lov", 'amount': payment.amount, 'kind': 'payment'})

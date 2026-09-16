@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load uz_numbers %}
 {% block title %}Bo'laklash #{{ butchering.pk }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -25,16 +26,16 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Input</div><div class="stat-value">{{ butchering.input_weight|floatformat:3 }} kg / {{ butchering.input_pieces }} dona</div>
+        <div class="stat-label">Input</div><div class="stat-value">{{ butchering.input_weight|uzqty }} kg / {{ butchering.input_pieces }} dona</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Output</div><div class="stat-value">{{ butchering.output_weight|floatformat:3 }} kg</div>
+        <div class="stat-label">Output</div><div class="stat-value">{{ butchering.output_weight|uzqty }} kg</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Farq</div><div class="stat-value">{{ butchering.difference|floatformat:3 }} kg</div>
+        <div class="stat-label">Farq</div><div class="stat-value">{{ butchering.difference|uzqty }} kg</div>
     </div></div></div>
     <div class="col-md-3"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Yield</div><div class="stat-value text-success">{{ butchering.yield_percentage|floatformat:2 }}%</div>
+        <div class="stat-label">Yield</div><div class="stat-value text-success">{{ butchering.yield_percentage|uzqty }}%</div>
     </div></div></div>
 </div>
 
@@ -48,9 +49,9 @@
                 <tr>
                     <td>{% include "partials/product_thumb.html" with product=out.product %}</td>
                     <td>{{ out.product.name }}</td>
-                    <td class="text-end">{{ out.quantity|floatformat:3 }} kg</td>
+                    <td class="text-end">{{ out.quantity|uzqty }} kg</td>
                     <td class="text-end">{{ out.pieces }} dona</td>
-                    <td class="text-end">{{ out.unit_cost|floatformat:0 }}</td>
+                    <td class="text-end">{{ out.unit_cost|uzsum }}</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -65,7 +66,7 @@
             <thead><tr><th>Turi</th><th class="text-end">Summa</th><th>Izoh</th></tr></thead>
             <tbody>
             {% for exp in expenses %}
-                <tr><td>{{ exp.get_expense_type_display }}</td><td class="text-end">{{ exp.amount|floatformat:0 }}</td><td>{{ exp.notes }}</td></tr>
+                <tr><td>{{ exp.get_expense_type_display }}</td><td class="text-end">{{ exp.amount|uzsum }}</td><td>{{ exp.notes }}</td></tr>
             {% empty %}
                 <tr><td colspan="3" class="text-center text-muted py-3">Yo'q</td></tr>
             {% endfor %}

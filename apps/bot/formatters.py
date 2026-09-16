@@ -1,22 +1,14 @@
 """Xabar matnlarida ishlatiladigan raqam formatlash yordamchilari — veb-sayt
-shablonlaridagi (`humanize`) ko'rinishga yaqin: minglik ajratkichi bo'sh joy."""
-from decimal import Decimal
+shablonlaridagi (`uzsum`/`uzqty`) bilan bir xil qoida: `apps.common.numbers`."""
+from apps.common.numbers import format_money, format_number
 
 
 def som(value) -> str:
-    if value is None:
-        value = Decimal('0')
-    value = Decimal(value).quantize(Decimal('1'))
-    sign = '-' if value < 0 else ''
-    grouped = f'{abs(int(value)):,}'.replace(',', ' ')
-    return f"{sign}{grouped} so'm"
+    return f'{format_money(value)} so\'m'
 
 
 def kg(value) -> str:
-    if value is None:
-        value = Decimal('0')
-    value = Decimal(value)
-    return f"{value:.3f} kg"
+    return f'{format_number(value, decimals=1)} kg'
 
 
 def pieces(value) -> str:

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}To'lov muddati kelganlar{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -24,7 +24,7 @@
                     <td>{{ sale.date|date:"d.m.Y" }}</td>
                     <td class="text-danger fw-semibold">{{ sale.due_date|date:"d.m.Y" }}</td>
                     <td class="text-end">{{ sale.due_date|timesince }}</td>
-                    <td class="text-end">{{ sale.debt_amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end">{{ sale.debt_amount|uzsum }}</td>
                     <td><a href="{% url 'sales:detail' sale.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
                 </tr>
             {% empty %}

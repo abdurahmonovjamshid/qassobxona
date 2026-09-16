@@ -3,7 +3,6 @@ tasdiqlanganda Telegram orqali adminlarga yuborish uchun (`apps.bot.admin_notify
 Faqat matn/jadval, tashqi shrift/logotip shart emas — reportlab core
 (Helvetica) shrifti standart lotin harflari va apostrofni to'liq qamrab oladi."""
 import io
-from decimal import Decimal
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -12,12 +11,11 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from apps.common.numbers import format_money, format_number
+
 
 def som(value) -> str:
-    value = Decimal(value or 0).quantize(Decimal('1'))
-    sign = '-' if value < 0 else ''
-    grouped = f'{abs(int(value)):,}'.replace(',', ' ')
-    return f"{sign}{grouped} so'm"
+    return f'{format_money(value)} so\'m'
 
 
 _styles = getSampleStyleSheet()
@@ -71,7 +69,7 @@ def build_purchase_pdf(purchase) -> bytes:
     data = [['#', 'Mahsulot', 'Netto (kg)', 'Dona', 'Narx/kg', 'Summa']]
     for i, item in enumerate(items, 1):
         data.append([
-            str(i), item.product.name, f'{item.net_weight:.3f}', str(item.pieces),
+            str(i), item.product.name, format_number(item.net_weight), str(item.pieces),
             som(item.price_per_kg), som(item.total),
         ])
     table = Table(data, colWidths=[10 * mm, 55 * mm, 25 * mm, 15 * mm, 30 * mm, 30 * mm], repeatRows=1)
@@ -111,7 +109,7 @@ def build_sale_pdf(sale) -> bytes:
     data = [['#', 'Mahsulot', 'Miqdor (kg)', 'Dona', 'Narx', 'Chegirma', 'Summa']]
     for i, item in enumerate(items, 1):
         data.append([
-            str(i), item.product.name, f'{item.quantity:.3f}', str(item.pieces),
+            str(i), item.product.name, format_number(item.quantity), str(item.pieces),
             som(item.price), som(item.discount), som(item.total),
         ])
     table = Table(

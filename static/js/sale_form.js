@@ -6,14 +6,8 @@
     'use strict';
 
     const formatMoney = window.formatMoney;
+    const formatStock = window.formatQty;
     const attachSearchPicker = window.attachSearchPicker;
-
-    // Ombor qoldig'ini har doim "50.5" kabi aniq bitta kasr xona bilan
-    // ko'rsatish uchun (haqiqiy hisob-kitoblarda to'liq aniqlik saqlanadi,
-    // faqat ko'rinishda yaxlitlanadi).
-    function formatStock(n) {
-        return (Math.round(n * 10) / 10).toFixed(1);
-    }
 
     function initCustomerPicker(data) {
         const root = document.querySelector('[data-picker="customer"]');

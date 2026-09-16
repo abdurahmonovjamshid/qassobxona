@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load uz_numbers %}
 {% block title %}Kassa{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -11,7 +11,7 @@
         <div class="card stat-card">
             <div class="card-body">
                 <div class="stat-label">Joriy balans</div>
-                <div class="stat-value {% if balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ balance|floatformat:0|intcomma }} so'm</div>
+                <div class="stat-value {% if balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ balance|uzsum }} so'm</div>
             </div>
         </div>
     </div>
@@ -65,7 +65,7 @@
                 <tr>
                     <td>{{ t.date|date:"d.m.Y" }}</td>
                     <td>{{ t.get_transaction_type_display }}</td>
-                    <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|floatformat:0|intcomma }}</td>
+                    <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|uzsum }}</td>
                     <td class="small text-muted">{{ t.reference }}</td>
                     <td class="small text-muted">{{ t.notes }}</td>
                 </tr>

@@ -5,6 +5,23 @@ window.formatMoney = function formatMoney(n) {
     return Math.round(n).toLocaleString('ru-RU').replace(/,/g, ' ');
 };
 
+// Og'irlik/miqdor/foiz uchun: 1 kasr xonagacha yaxlitlaydi, son butun bo'lsa
+// kasr qismni umuman ko'rsatmaydi, minglik qismini bo'sh joy bilan ajratadi.
+// Masalan: 1000 -> "1 000", 1.5 -> "1.5", 1.000 -> "1".
+window.formatQty = function formatQty(n, decimals) {
+    decimals = decimals === undefined ? 1 : decimals;
+    const factor = Math.pow(10, decimals);
+    const rounded = Math.round((n || 0) * factor) / factor;
+    let text = rounded.toFixed(decimals);
+    if (text.includes('.')) {
+        text = text.replace(/0+$/, '').replace(/\.$/, '');
+    }
+    const negative = text.startsWith('-');
+    const [intPart, fracPart] = (negative ? text.slice(1) : text).split('.');
+    const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return (negative ? '-' : '') + grouped + (fracPart ? '.' + fracPart : '');
+};
+
 window.attachSearchPicker = function attachSearchPicker({ root, select, items, renderItem, matchText, searchText, onSelect, placeholder }) {
     const searchInput = root.querySelector('.picker-search');
     const resultsBox = root.querySelector('.picker-results');
