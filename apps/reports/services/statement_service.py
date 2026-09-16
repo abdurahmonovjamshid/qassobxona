@@ -44,7 +44,7 @@ def build_customer_statement(customer, *, date_from=None, date_to=None):
     debit_events = [
         {
             'date': s.date, 'op': f'Sotuv {s.sale_number}', 'amount': s.total_amount, 'category': 'Sotuv',
-            'sale_id': s.id, 'items': list(s.items.all()),
+            'sale_id': s.id, 'line_items': list(s.items.all()),
         }
         for s in sales
     ]
@@ -64,7 +64,7 @@ def build_supplier_statement(supplier, *, date_from=None, date_to=None):
     debit_events = [
         {
             'date': p.date, 'op': f'Xarid {p.purchase_number}', 'amount': p.total_amount, 'category': 'Xarid',
-            'purchase_id': p.id, 'items': list(p.items.all()),
+            'purchase_id': p.id, 'line_items': list(p.items.all()),
         }
         for p in purchases
     ]

@@ -50,9 +50,9 @@
                         {% else %}
                             {{ row.op }}
                         {% endif %}
-                        {% if row.items %}
+                        {% if row.line_items %}
                             <div class="small text-muted">
-                                {% for item in row.items %}
+                                {% for item in row.line_items %}
                                     <div>{{ item.product.name }} — {% if row.purchase_id %}{{ item.net_weight|uzqty }}{% else %}{{ item.quantity|uzqty }}{% endif %} kg{% if item.pieces %} ({{ item.pieces }} dona){% endif %}</div>
                                 {% endfor %}
                             </div>
