@@ -121,7 +121,7 @@ def on_item_pieces(message, tg_user):
         'price_per_kg': data['cur_price'],
         'pieces': pieces,
     })
-    for key in ('cur_product_id', 'cur_product_name', 'cur_weight', 'cur_price'):
+    for key in ('cur_product_id', 'cur_product_name', 'cur_weight', 'cur_price', 'items'):
         data.pop(key, None)
     set_state(tg_user, 'purchase.picking_item', **data, items=items)
 
@@ -200,7 +200,7 @@ def on_expense_notes(message, tg_user):
     data = dict(tg_user.data)
     expenses = list(data.get('expenses', []))
     expenses.append({'expense_type': data['cur_exp_type'], 'amount': data['cur_exp_amount'], 'notes': notes})
-    for key in ('cur_exp_type', 'cur_exp_amount'):
+    for key in ('cur_exp_type', 'cur_exp_amount', 'expenses'):
         data.pop(key, None)
     set_state(tg_user, 'purchase.picking_item', **data, expenses=expenses)
 

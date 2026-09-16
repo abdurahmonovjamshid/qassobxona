@@ -157,7 +157,7 @@ def on_output_pieces(message, tg_user):
         'quantity': data['cur_output_qty'],
         'pieces': pieces,
     })
-    for key in ('cur_output_product_id', 'cur_output_product_name', 'cur_output_qty'):
+    for key in ('cur_output_product_id', 'cur_output_product_name', 'cur_output_qty', 'outputs'):
         data.pop(key, None)
     set_state(tg_user, 'butch.picking_output', **data, outputs=outputs)
 
@@ -234,7 +234,7 @@ def on_expense_notes(message, tg_user):
     data = dict(tg_user.data)
     expenses = list(data.get('expenses', []))
     expenses.append({'expense_type': data['cur_exp_type'], 'amount': data['cur_exp_amount'], 'notes': notes})
-    for key in ('cur_exp_type', 'cur_exp_amount'):
+    for key in ('cur_exp_type', 'cur_exp_amount', 'expenses'):
         data.pop(key, None)
     set_state(tg_user, 'butch.picking_output', **data, expenses=expenses)
 

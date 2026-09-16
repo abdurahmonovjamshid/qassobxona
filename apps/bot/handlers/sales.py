@@ -153,7 +153,7 @@ def on_item_pieces(message, tg_user):
         'discount': data['cur_discount'],
         'pieces': pieces,
     })
-    for key in ('cur_product_id', 'cur_product_name', 'cur_default_price', 'cur_qty', 'cur_price', 'cur_discount'):
+    for key in ('cur_product_id', 'cur_product_name', 'cur_default_price', 'cur_qty', 'cur_price', 'cur_discount', 'items'):
         data.pop(key, None)
     set_state(tg_user, 'sale.picking_item', **data, items=items)
 
