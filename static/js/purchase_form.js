@@ -86,17 +86,27 @@
         }
 
         function addToCart(product, netWeight, pieces, pricePerKg) {
-            // Bitta mahsulot bir nechta alohida qatorda bo'lishi mumkin
-            // (masalan turli narx/vaznli hayvonlar) — birlashtirilmaydi.
-            cart.push({
-                productId: product.id,
-                name: product.name,
-                unit: product.unit,
-                image: product.image,
-                netWeight: netWeight || 0,
-                pieces: pieces || 0,
-                pricePerKg: pricePerKg || 0,
-            });
+            // Bir xil mahsulot qayta tanlansa alohida qator qo'shilmaydi —
+            // mavjud qatorga qo'shiladi (vazn/dona yig'iladi, narx/kg
+            // og'irlik bo'yicha o'rtacha qilib qayta hisoblanadi).
+            const existing = cart.find((c) => c.productId === product.id);
+            if (existing) {
+                const totalWeight = existing.netWeight + (netWeight || 0);
+                const totalValue = existing.netWeight * existing.pricePerKg + (netWeight || 0) * (pricePerKg || 0);
+                existing.netWeight = totalWeight;
+                existing.pieces += pieces || 0;
+                existing.pricePerKg = totalWeight > 0 ? totalValue / totalWeight : 0;
+            } else {
+                cart.push({
+                    productId: product.id,
+                    name: product.name,
+                    unit: product.unit,
+                    image: product.image,
+                    netWeight: netWeight || 0,
+                    pieces: pieces || 0,
+                    pricePerKg: pricePerKg || 0,
+                });
+            }
             renderAll();
         }
 
