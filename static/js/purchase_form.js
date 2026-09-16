@@ -1,7 +1,9 @@
 // "Yangi xarid" formasi: sotuv sahifasidagi kabi mahsulot katalogi
-// (qidiruv + kategoriya filtri) va savatcha — har bir qatorda netto vazn,
-// soni, narx/kg va umumiy summa kiritiladi (narx/kg va summa bir-biridan
-// avtomatik hisoblanadi: qaysi biri tahrirlansa, ikkinchisi shunga qarab
+// (qidiruv + kategoriya filtri) va savatcha. Katalogda faqat netto vazn
+// va soni kiritilib "+ Qo'shish" bosiladi (narx bu bosqichda kiritilmaydi —
+// sotuv katalogidan farqli o'laroq, xarid narxi har safar boshqacha bo'lishi
+// mumkin, mahsulotning tayyor narxi yo'q). Narx/kg va summa savatcha
+// qatorida kiritiladi (biri tahrirlansa ikkinchisi shunga qarab avtomatik
 // yangilanadi). Submitda savatcha formset yashirin inputlariga
 // sinxronlanadi. Pastda qo'shimcha xarajatlar formset.js naqshi bilan qoladi.
 (function () {
@@ -85,17 +87,14 @@
                 });
         }
 
-        function addToCart(product, netWeight, pieces, pricePerKg) {
-            // Bir xil mahsulot qayta tanlansa alohida qator qo'shilmaydi —
-            // mavjud qatorga qo'shiladi (vazn/dona yig'iladi, narx/kg
-            // og'irlik bo'yicha o'rtacha qilib qayta hisoblanadi).
+        function addToCart(product, netWeight, pieces) {
+            // Katalogda faqat kg/dona kiritiladi (sotuv formasidagi kabi) —
+            // narx/kg savatcha qatorida kiritiladi. Bir xil mahsulot qayta
+            // tanlansa alohida qator qo'shilmaydi, mavjud qatorga qo'shiladi.
             const existing = cart.find((c) => c.productId === product.id);
             if (existing) {
-                const totalWeight = existing.netWeight + (netWeight || 0);
-                const totalValue = existing.netWeight * existing.pricePerKg + (netWeight || 0) * (pricePerKg || 0);
-                existing.netWeight = totalWeight;
+                existing.netWeight += netWeight || 0;
                 existing.pieces += pieces || 0;
-                existing.pricePerKg = totalWeight > 0 ? totalValue / totalWeight : 0;
             } else {
                 cart.push({
                     productId: product.id,
@@ -104,7 +103,7 @@
                     image: product.image,
                     netWeight: netWeight || 0,
                     pieces: pieces || 0,
-                    pricePerKg: pricePerKg || 0,
+                    pricePerKg: 0,
                 });
             }
             renderAll();
@@ -125,8 +124,6 @@
                 const inCartLines = cart.filter((c) => c.productId === p.id);
                 const inCartNet = inCartLines.reduce((s, c) => s + c.netWeight, 0);
                 const inCartPieces = inCartLines.reduce((s, c) => s + c.pieces, 0);
-                const inCartSumma = inCartLines.reduce((s, c) => s + c.netWeight * c.pricePerKg, 0);
-                const avgPrice = inCartNet > 0 ? inCartSumma / inCartNet : 0;
                 const img = p.image
                     ? `<img src="${p.image}" class="product-card-img" alt="">`
                     : '<div class="product-card-img-placeholder">🥩</div>';
@@ -137,11 +134,10 @@
                         ${img}
                         <div class="card-body p-2">
                             <div class="product-card-name"><span class="badge bg-secondary-subtle text-dark me-1">${p.category_label || p.category}</span>${p.name}</div>
-                            ${inCartLines.length > 0 ? `<div class="product-card-in-cart">Tanlangan: ${inCartNet.toFixed(3)} kg, ${inCartPieces} dona, ${formatMoney(avgPrice)} so'm/kg</div>` : ''}
+                            ${inCartLines.length > 0 ? `<div class="product-card-in-cart">Tanlangan: ${inCartNet.toFixed(3)} kg, ${inCartPieces} dona</div>` : ''}
                             <div class="d-flex flex-wrap gap-1 mt-2">
                                 <input type="number" class="form-control form-control-sm catalog-net" inputmode="decimal" step="0.001" min="0" placeholder="Netto kg">
                                 <input type="number" class="form-control form-control-sm catalog-pieces" inputmode="numeric" step="1" min="0" placeholder="Soni">
-                                <input type="number" class="form-control form-control-sm catalog-price" inputmode="decimal" step="0.01" min="0" placeholder="Narx/kg">
                             </div>
                             <button type="button" class="btn btn-sm btn-primary w-100 mt-2 catalog-add">+ Qo'shish</button>
                             <div class="small text-danger mt-1 d-none catalog-error"></div>
@@ -149,23 +145,21 @@
                     </div>`;
                 const netInput = wrap.querySelector('.catalog-net');
                 const piecesInput = wrap.querySelector('.catalog-pieces');
-                const priceInput = wrap.querySelector('.catalog-price');
                 const errorEl = wrap.querySelector('.catalog-error');
                 function doAdd() {
                     errorEl.classList.add('d-none');
                     const net = parseFloat(netInput.value) || 0;
                     const pieces = parseInt(piecesInput.value, 10) || 0;
-                    const price = parseFloat(priceInput.value) || 0;
                     if (net <= 0) {
                         errorEl.textContent = "Netto vazn (kg) kiriting.";
                         errorEl.classList.remove('d-none');
                         netInput.focus();
                         return;
                     }
-                    addToCart(p, net, pieces, price);
+                    addToCart(p, net, pieces);
                 }
                 wrap.querySelector('.catalog-add').addEventListener('click', doAdd);
-                [netInput, piecesInput, priceInput].forEach((el) => {
+                [netInput, piecesInput].forEach((el) => {
                     el.addEventListener('keydown', (e) => {
                         if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
                     });
