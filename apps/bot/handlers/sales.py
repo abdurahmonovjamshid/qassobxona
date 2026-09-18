@@ -5,10 +5,14 @@
 `transaction.atomic()` blokida saqlanadi, so'ng `sale_service.confirm_sale()`
 chaqiriladi (tannarx/ombordan chiqim/qoldiq yetarli emasligi tekshiruvi shu
 servis ichida, o'zgarishsiz)."""
+import io
+import logging
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
@@ -31,7 +35,7 @@ def sales_menu(message, tg_user):
     from telebot import types
     kb = types.InlineKeyboardMarkup()
     kb.row(types.InlineKeyboardButton('➕ Yangi sotuv', callback_data='snew:1'))
-    kb.row(types.InlineKeyboardButton("📋 So'nggi sotuvlar", callback_data='slist:0'))
+    kb.row(types.InlineKeyboardButton("📋 So'nggi sotuvlar", callback_data='slist:1'))
     kb.row(types.InlineKeyboardButton("⏰ Muddati o'tgan qarzlar", callback_data='sdue:1'))
     bot.send_message(message.chat.id, 'Sotuv bo\'limi:', reply_markup=kb)
 
@@ -285,22 +289,39 @@ def confirm_sale(call, tg_user):
 @register_callback('slist')
 def list_sales(call, tg_user):
     bot.answer_callback_query(call.id)
-    sales = Sale.objects.select_related('customer').all()[:10]
+    send_calendar(call.message.chat.id, 'sl_date', "Qaysi sana uchun sotuvlar ro'yxati kerak?")
+
+
+def _on_list_date_picked(call, tg_user, picked):
+    sales = (
+        Sale.objects.select_related('customer')
+        .filter(date=picked, status=Sale.Status.CONFIRMED)
+        .order_by('-id')[:30]
+    )
     if not sales:
-        bot.send_message(call.message.chat.id, "Hozircha sotuvlar yo'q.")
+        bot.send_message(call.message.chat.id, f"{picked.strftime('%d.%m.%Y')} sanasida tasdiqlangan sotuvlar yo'q.")
         return
+    from telebot import types
+    from apps.common.pdf_documents import build_sale_pdf
+
     for s in sales:
         text = (
             f"{s.sale_number} — {s.customer.name}\n"
             f"{s.date} | {s.get_status_display()}\n"
             f"Jami: {som(s.total_amount)} | Qarz: {som(s.debt_amount)}"
         )
-        from telebot import types
-        kb = None
-        if s.status == Sale.Status.CONFIRMED:
-            kb = types.InlineKeyboardMarkup()
-            kb.row(types.InlineKeyboardButton('❌ Bekor qilish', callback_data=f'scancel:{s.pk}'))
+        kb = types.InlineKeyboardMarkup()
+        kb.row(types.InlineKeyboardButton('❌ Bekor qilish', callback_data=f'scancel:{s.pk}'))
         bot.send_message(call.message.chat.id, text, reply_markup=kb)
+        try:
+            pdf_bytes = build_sale_pdf(s)
+        except Exception:
+            logger.exception('Sotuv nakladnoy PDF yaratib bolmadi: %s', s.sale_number)
+            continue
+        bot.send_document(call.message.chat.id, io.BytesIO(pdf_bytes), visible_file_name=f'{s.sale_number}.pdf')
+
+
+register_calendar('sl_date', _on_list_date_picked)
 
 
 @register_callback('scancel')

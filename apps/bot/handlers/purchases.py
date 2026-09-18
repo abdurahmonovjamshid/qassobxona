@@ -7,10 +7,14 @@ so'ng `purchase_service.confirm_purchase()` chaqiriladi (ombor kirim va
 landed-cost taqsimoti xuddi veb-saytdagidek shu servis ichida bo'ladi), va
 agar boshlang'ich to'lov kiritilgan bo'lsa `payment_service.create_payment()`
 chaqiriladi."""
+import io
+import logging
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
@@ -40,7 +44,7 @@ def _menu_inline():
     from telebot import types
     kb = types.InlineKeyboardMarkup()
     kb.row(types.InlineKeyboardButton('➕ Yangi xarid', callback_data='pnew:1'))
-    kb.row(types.InlineKeyboardButton("📋 So'nggi xaridlar", callback_data='plist:0'))
+    kb.row(types.InlineKeyboardButton("📋 So'nggi xaridlar", callback_data='plist:1'))
     return kb
 
 
@@ -334,22 +338,39 @@ def confirm_purchase(call, tg_user):
 @register_callback('plist')
 def list_purchases(call, tg_user):
     bot.answer_callback_query(call.id)
-    purchases = Purchase.objects.select_related('supplier').all()[:10]
+    send_calendar(call.message.chat.id, 'pl_date', "Qaysi sana uchun xaridlar ro'yxati kerak?")
+
+
+def _on_list_date_picked(call, tg_user, picked):
+    purchases = (
+        Purchase.objects.select_related('supplier')
+        .filter(date=picked, status=Purchase.Status.CONFIRMED)
+        .order_by('-id')[:30]
+    )
     if not purchases:
-        bot.send_message(call.message.chat.id, "Hozircha xaridlar yo'q.")
+        bot.send_message(call.message.chat.id, f"{picked.strftime('%d.%m.%Y')} sanasida tasdiqlangan xaridlar yo'q.")
         return
+    from telebot import types
+    from apps.common.pdf_documents import build_purchase_pdf
+
     for p in purchases:
         text = (
             f"{p.purchase_number} — {p.supplier.name}\n"
             f"{p.date} | {p.get_status_display()}\n"
             f"Jami: {som(p.total_amount)} | Qarz: {som(p.debt_amount)}"
         )
-        from telebot import types
-        kb = None
-        if p.status == Purchase.Status.CONFIRMED:
-            kb = types.InlineKeyboardMarkup()
-            kb.row(types.InlineKeyboardButton('❌ Bekor qilish', callback_data=f'pcancel:{p.pk}'))
+        kb = types.InlineKeyboardMarkup()
+        kb.row(types.InlineKeyboardButton('❌ Bekor qilish', callback_data=f'pcancel:{p.pk}'))
         bot.send_message(call.message.chat.id, text, reply_markup=kb)
+        try:
+            pdf_bytes = build_purchase_pdf(p)
+        except Exception:
+            logger.exception('Xarid nakladnoy PDF yaratib bolmadi: %s', p.purchase_number)
+            continue
+        bot.send_document(call.message.chat.id, io.BytesIO(pdf_bytes), visible_file_name=f'{p.purchase_number}.pdf')
+
+
+register_calendar('pl_date', _on_list_date_picked)
 
 
 @register_callback('pcancel')
