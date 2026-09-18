@@ -14,7 +14,7 @@ from django.db import transaction
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import errors_to_text, kg, som
+from apps.bot.formatters import date_fmt, errors_to_text, kg, som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal, parse_int
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
@@ -262,7 +262,7 @@ def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     lines = [
         f"Kiritilayotgan mahsulot: {data['input_product_name']}",
-        f"Sana: {data['date']}",
+        f"Sana: {date_fmt(data['date'])}",
         '',
         _outputs_text(data['input_weight'], data.get('outputs', [])),
     ]
@@ -329,7 +329,7 @@ def list_butcherings(call, tg_user):
     for b in items:
         text = (
             f"#{b.pk} — {b.input_product.name}\n"
-            f"{b.date} | {b.get_status_display()}\n"
+            f"{date_fmt(b.date)} | {b.get_status_display()}\n"
             f"Kirim: {kg(b.input_weight)} | Chiqish: {kg(b.output_weight)} | Chiqim %: {b.yield_percentage}%"
         )
         from telebot import types

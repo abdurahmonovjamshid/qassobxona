@@ -14,7 +14,7 @@ from django.db import transaction
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import errors_to_text, kg
+from apps.bot.formatters import date_fmt, errors_to_text, kg
 from apps.bot.formatters import pieces as pieces_fmt
 from apps.bot.formatters import som
 from apps.bot.handlers.common import register_menu
@@ -229,10 +229,10 @@ def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     lines = [
         f"Mijoz: {data['customer_name']}",
-        f"Sana: {data['date']}",
+        f"Sana: {date_fmt(data['date'])}",
     ]
     if data.get('due_date'):
-        lines.append(f"To'lov muddati: {data['due_date']}")
+        lines.append(f"To'lov muddati: {date_fmt(data['due_date'])}")
     lines.append('')
     lines.append(_cart_text(data.get('items', [])))
     paid = Decimal(data.get('paid_amount', '0'))
@@ -310,7 +310,7 @@ def _on_list_date_picked(call, tg_user, picked):
     for s in sales:
         lines = [
             f"{s.sale_number} — {s.customer.name}",
-            f"{s.date} | {s.get_status_display()}",
+            f"{date_fmt(s.date)} | {s.get_status_display()}",
             '',
             'Mahsulotlar:',
         ]
@@ -417,5 +417,5 @@ def due_sales(call, tg_user):
         return
     lines = ["⏰ Muddati o'tgan qarzli sotuvlar:", '']
     for s in sales[:30]:
-        lines.append(f"{s.sale_number} — {s.customer.name} | muddat: {s.due_date} | qarz: {som(s.debt_amount)}")
+        lines.append(f"{s.sale_number} — {s.customer.name} | muddat: {date_fmt(s.due_date)} | qarz: {som(s.debt_amount)}")
     bot.send_message(call.message.chat.id, '\n'.join(lines))

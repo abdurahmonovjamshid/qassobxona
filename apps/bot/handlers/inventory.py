@@ -4,7 +4,7 @@
 orqali, StockMovement to'g'ridan-to'g'ri o'qilmaydi."""
 from apps.bot import keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import kg, som
+from apps.bot.formatters import date_fmt, kg, som
 from apps.bot.handlers.common import register_menu
 from apps.bot.state import register_callback
 from apps.inventory.models import StockMovement
@@ -52,5 +52,5 @@ def movements(call, tg_user):
     lines = ["📜 So'nggi ombor harakatlari:", '']
     for m in moves:
         sign = '+' if m.direction == StockMovement.Direction.IN else '-'
-        lines.append(f'{m.date} {m.product.name}: {sign}{kg(m.quantity)} ({m.get_movement_type_display()})')
+        lines.append(f'{date_fmt(m.date)} {m.product.name}: {sign}{kg(m.quantity)} ({m.get_movement_type_display()})')
     bot.send_message(call.message.chat.id, '\n'.join(lines))

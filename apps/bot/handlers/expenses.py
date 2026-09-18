@@ -10,7 +10,7 @@ from django.db import transaction
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import errors_to_text, som
+from apps.bot.formatters import date_fmt, errors_to_text, som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
@@ -85,7 +85,7 @@ def on_description(message, tg_user):
         f"Kategoriya: {data['category_name']}",
         f"Summa: {som(data['amount'])}",
         f"To'lov turi: {dict(choices.PAYMENT_TYPES).get(data['payment_type'], data['payment_type'])}",
-        f"Sana: {data['date']}",
+        f"Sana: {date_fmt(data['date'])}",
     ]
     if description:
         lines.append(f'Izoh: {description}')
@@ -133,5 +133,5 @@ def list_expenses(call, tg_user):
         return
     lines = ["🧾 So'nggi xarajatlar:", '']
     for e in expenses:
-        lines.append(f'{e.date} | {e.category.name}: {som(e.amount)} ({e.get_payment_type_display()})')
+        lines.append(f'{date_fmt(e.date)} | {e.category.name}: {som(e.amount)} ({e.get_payment_type_display()})')
     bot.send_message(call.message.chat.id, '\n'.join(lines))

@@ -16,7 +16,7 @@ from django.db import transaction
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import errors_to_text, kg
+from apps.bot.formatters import date_fmt, errors_to_text, kg
 from apps.bot.formatters import pieces as pieces_fmt
 from apps.bot.formatters import som
 from apps.bot.handlers.common import register_menu
@@ -272,7 +272,7 @@ def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     lines = [
         f"Yetkazib beruvchi: {data['supplier_name']}",
-        f"Sana: {data['date']}",
+        f"Sana: {date_fmt(data['date'])}",
         '',
         _cart_text(data.get('items', [])),
     ]
@@ -359,7 +359,7 @@ def _on_list_date_picked(call, tg_user, picked):
     for p in purchases:
         lines = [
             f"{p.purchase_number} — {p.supplier.name}",
-            f"{p.date} | {p.get_status_display()}",
+            f"{date_fmt(p.date)} | {p.get_status_display()}",
             '',
             'Mahsulotlar:',
         ]

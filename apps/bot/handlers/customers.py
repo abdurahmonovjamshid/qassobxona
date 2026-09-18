@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from apps.bot import keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import som
+from apps.bot.formatters import date_fmt, som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal
 from apps.bot.pickers import send_picker
@@ -106,7 +106,7 @@ def _send_detail(chat_id, customer):
     ]
     for d, op, amount in history[-10:]:
         sign = '+' if amount >= 0 else ''
-        lines.append(f'{d} {op} {sign}{som(amount)}')
+        lines.append(f'{date_fmt(d)} {op} {sign}{som(amount)}')
     bot.send_message(chat_id, '\n'.join(l for l in lines if l is not None))
 
 

@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import errors_to_text, som
+from apps.bot.formatters import date_fmt, errors_to_text, som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
@@ -117,7 +117,7 @@ def _send_confirm(chat_id, tg_user):
         f'{party_label}: {data["party_name"]}',
         f"Summa: {som(data['amount'])}",
         f"To'lov turi: {dict(choices.PAYMENT_TYPES).get(data['payment_type'], data['payment_type'])}",
-        f"Sana: {data['date']}",
+        f"Sana: {date_fmt(data['date'])}",
     ]
     if data.get('notes'):
         lines.append(f"Izoh: {data['notes']}")
@@ -175,7 +175,7 @@ def list_payments(call, tg_user):
         return
     for p in payments:
         party = p.customer.name if p.customer else p.supplier.name
-        text = f"{party} — {som(p.amount)} ({p.get_payment_type_display()})\n{p.date}"
+        text = f"{party} — {som(p.amount)} ({p.get_payment_type_display()})\n{date_fmt(p.date)}"
         from telebot import types
         kb = types.InlineKeyboardMarkup()
         kb.row(types.InlineKeyboardButton('❌ Bekor qilish (o\'chirish)', callback_data=f'paycancel:{p.pk}'))
