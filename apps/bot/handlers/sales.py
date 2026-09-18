@@ -12,11 +12,11 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-logger = logging.getLogger(__name__)
-
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
-from apps.bot.formatters import errors_to_text, som
+from apps.bot.formatters import errors_to_text, kg
+from apps.bot.formatters import pieces as pieces_fmt
+from apps.bot.formatters import som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal, parse_int
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
@@ -25,9 +25,12 @@ from apps.payments.services import payment_service
 from apps.sales.models import Sale, SaleItem
 from apps.sales.services import sale_service
 
+logger = logging.getLogger(__name__)
+
 register_pagination('s_cust', choices.active_customers)
 register_pagination('s_prod', choices.active_products_with_stock)
 register_pagination('s_ptype', lambda: choices.PAYMENT_TYPES)
+register_pagination('s_pay_type', lambda: choices.PAYMENT_TYPES)
 
 
 @register_menu(keyboards.MENU_SALES)
@@ -305,23 +308,91 @@ def _on_list_date_picked(call, tg_user, picked):
     from apps.common.pdf_documents import build_sale_pdf
 
     for s in sales:
-        text = (
-            f"{s.sale_number} — {s.customer.name}\n"
-            f"{s.date} | {s.get_status_display()}\n"
-            f"Jami: {som(s.total_amount)} | Qarz: {som(s.debt_amount)}"
-        )
+        lines = [
+            f"{s.sale_number} — {s.customer.name}",
+            f"{s.date} | {s.get_status_display()}",
+            '',
+            'Mahsulotlar:',
+        ]
+        for item in s.items.select_related('product').all():
+            lines.append(
+                f'• {item.product.name} — {kg(item.quantity)}, {pieces_fmt(item.pieces)} '
+                f'× {som(item.price)} = {som(item.total)}'
+            )
+        lines += [
+            '',
+            f'Jami: {som(s.total_amount)} | Qarz: {som(s.debt_amount)}',
+        ]
         kb = types.InlineKeyboardMarkup()
-        kb.row(types.InlineKeyboardButton('❌ Bekor qilish', callback_data=f'scancel:{s.pk}'))
-        bot.send_message(call.message.chat.id, text, reply_markup=kb)
+        kb.row(
+            types.InlineKeyboardButton('❌ Bekor qilish', callback_data=f'scancel:{s.pk}'),
+            types.InlineKeyboardButton("💵 To'lov kiritish", callback_data=f'spay:{s.pk}'),
+        )
+        sent = bot.send_message(call.message.chat.id, '\n'.join(lines), reply_markup=kb)
         try:
             pdf_bytes = build_sale_pdf(s)
         except Exception:
             logger.exception('Sotuv nakladnoy PDF yaratib bolmadi: %s', s.sale_number)
             continue
-        bot.send_document(call.message.chat.id, io.BytesIO(pdf_bytes), visible_file_name=f'{s.sale_number}.pdf')
+        bot.send_document(
+            call.message.chat.id, io.BytesIO(pdf_bytes), visible_file_name=f'{s.sale_number}.pdf',
+            reply_to_message_id=sent.message_id,
+        )
 
 
 register_calendar('sl_date', _on_list_date_picked)
+
+
+@register_callback('spay')
+def start_existing_sale_payment(call, tg_user):
+    sale_id = int(call.data.split(':', 1)[1])
+    sale = Sale.objects.get(pk=sale_id)
+    bot.answer_callback_query(call.id)
+    if sale.debt_amount <= 0:
+        bot.send_message(call.message.chat.id, "Bu sotuvda qarz yo'q.")
+        return
+    set_state(tg_user, 'sale.pay_existing_amount', pay_sale_id=sale_id)
+    bot.send_message(
+        call.message.chat.id, f"To'lov summasi? (Qarz: {som(sale.debt_amount)})",
+        reply_markup=keyboards.cancel_only(),
+    )
+
+
+@register_state('sale.pay_existing_amount')
+def on_pay_existing_amount(message, tg_user):
+    amount = parse_decimal(message.text)
+    if amount is None or amount <= 0:
+        bot.send_message(message.chat.id, "Summa musbat bo'lishi kerak. Qayta kiriting:")
+        return
+    set_state(tg_user, 'sale.pay_existing_type', pay_amount=str(amount))
+    send_picker(message.chat.id, 's_pay_type', choices.PAYMENT_TYPES, "To'lov turi:")
+
+
+@register_callback('s_pay_type')
+def pick_existing_sale_payment_type(call, tg_user):
+    code = call.data.split(':', 1)[1]
+    bot.answer_callback_query(call.id)
+    data = tg_user.data
+    sale = Sale.objects.get(pk=data['pay_sale_id'])
+    amount = Decimal(data['pay_amount'])
+    try:
+        payment_service.create_payment(
+            amount=amount, payment_type=code, date=sale.date,
+            customer=sale.customer, sale=sale, user=tg_user.django_user,
+        )
+        tg_user.reset_state()
+        sale.refresh_from_db()
+        bot.send_message(
+            call.message.chat.id,
+            f"✅ To'lov qabul qilindi.\nQolgan qarz: {som(sale.debt_amount)}",
+            reply_markup=keyboards.main_menu(),
+        )
+    except ValidationError as exc:
+        tg_user.reset_state()
+        bot.send_message(
+            call.message.chat.id, f"❌ Xatolik:\n{errors_to_text(exc)}",
+            reply_markup=keyboards.main_menu(),
+        )
 
 
 @register_callback('scancel')
