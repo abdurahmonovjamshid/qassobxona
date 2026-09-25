@@ -21,6 +21,7 @@ from apps.bot.formatters import pieces as pieces_fmt
 from apps.bot.formatters import som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal, parse_int
+from apps.bot.links import supplier_link
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.services import payment_service
@@ -358,7 +359,7 @@ def _on_list_date_picked(call, tg_user, picked):
 
     for p in purchases:
         lines = [
-            f"{p.purchase_number} — {p.supplier.name}",
+            f"{p.purchase_number} — {supplier_link(p.supplier)}",
             f"{date_fmt(p.date)} | {p.get_status_display()}",
             '',
             'Mahsulotlar:',

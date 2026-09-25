@@ -38,13 +38,34 @@ def register_command(prefix):
 
 
 def _parse_command(text):
-    """"/sup_12" -> ("sup", 12). Mos kelmasa (None, None)."""
+    """Ikkala ko'rinishni ham tushunadi:
+
+    - `/sup_12` — ochiq buyruq (bot username'i noma'lum bo'lgan holat uchun);
+    - `/start sup_12` — ism ortiga yashiringan havola bosilganda Telegram
+      yuboradigan deep-link (`apps/bot/links.py` ga qarang).
+
+    Mos kelmasa (None, None) qaytaradi."""
+    text = (text or '').strip()
+    if text.startswith('/start '):
+        text = '/' + text[len('/start '):].strip()
     if not text.startswith('/') or '_' not in text:
         return None, None
     prefix, _, raw_id = text[1:].partition('_')
     if prefix not in COMMAND_ROUTES or not raw_id.isdigit():
         return None, None
     return prefix, int(raw_id)
+
+
+def _delete_silently(message):
+    """Ism ortiga yashiringan havola bosilganda Telegram foydalanuvchi nomidan
+    `/start sup_12` xabarini yuboradi. Uni darhol o'chiramiz — shunda suhbatda
+    faqat ism va javob qoladi, texnik buyruq ko'rinmaydi. (Bot shaxsiy
+    suhbatlarda kiruvchi xabarni o'chira oladi; o'chirib bo'lmasa — muammo
+    emas, shunchaki xabar qolib ketadi.)"""
+    try:
+        bot.delete_message(message.chat.id, message.message_id)
+    except Exception:
+        pass
 
 
 def get_tg_user(telegram_id) -> TgUser:
@@ -74,12 +95,14 @@ def on_text(message):
         send_main_menu(message.chat.id, 'Bekor qilindi.')
         return
 
-    # Parametrli buyruq (/sup_12) — /start kabi joriy oqimdan ustun turadi,
-    # aks holda yarim tugallangan holatda qolib ketgan foydalanuvchi uchun
-    # ro'yxatdagi havolalar ishlamay qolardi.
+    # Parametrli buyruq (/sup_12 yoki ism ortidagi havoladan /start sup_12) —
+    # /start kabi joriy oqimdan ustun turadi, aks holda yarim tugallangan
+    # holatda qolib ketgan foydalanuvchi uchun ro'yxatdagi ismlar ishlamay
+    # qolardi.
     command_prefix, obj_id = _parse_command(message.text)
     if command_prefix:
         tg_user.reset_state()
+        _delete_silently(message)
         COMMAND_ROUTES[command_prefix](message, tg_user, obj_id)
         return
 

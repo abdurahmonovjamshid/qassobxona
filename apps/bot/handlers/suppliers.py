@@ -9,7 +9,8 @@ from apps.bot.formatters import date_fmt, som
 from apps.bot import statements
 from apps.bot.handlers.common import register_command, register_menu
 from apps.bot.inputs import is_skip, parse_decimal
-from apps.bot.pickers import register_pagination, send_picker
+from apps.bot.links import supplier_link
+from apps.bot.pickers import send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.models import active_payments
 from apps.suppliers.models import Supplier
@@ -26,17 +27,6 @@ def suppliers_menu(message, tg_user):
     bot.send_message(message.chat.id, 'Yetkazib beruvchilar bo\'limi:', reply_markup=kb)
 
 
-def _akt_list_items():
-    """Akt-sverka tugmalari uchun ro'yxat (sahifalash ham shundan oladi)."""
-    return [
-        (s.id, f'{s.name} — {som(s.get_total_debt())}')
-        for s in Supplier.objects.filter(active=True).order_by('name')[:50]
-    ]
-
-
-register_pagination('sup_akt', _akt_list_items)
-
-
 @register_callback('suplist')
 def list_suppliers(call, tg_user):
     bot.answer_callback_query(call.id)
@@ -44,19 +34,10 @@ def list_suppliers(call, tg_user):
     if not suppliers:
         bot.send_message(call.message.chat.id, "Yetkazib beruvchilar yo'q.")
         return
-    lines = ['🚚 Yetkazib beruvchilar', 'Nomiga yoki buyrug\'iga bossangiz akt-sverka keladi.', '']
+    lines = ['🚚 Yetkazib beruvchilar', 'Ism ustiga bossangiz akt-sverka keladi.', '']
     for s in suppliers:
-        lines.append(f'{s.name} — qarzimiz: {som(s.get_total_debt())}\n   /sup_{s.id}')
-    bot.send_message(
-        call.message.chat.id, '\n'.join(lines),
-        reply_markup=keyboards.picker('sup_akt', _akt_list_items()),
-    )
-
-
-@register_callback('sup_akt')
-def send_akt_callback(call, tg_user):
-    bot.answer_callback_query(call.id, 'Akt-sverka tayyorlanmoqda...')
-    _send_akt(call.message.chat.id, int(call.data.split(':', 1)[1]))
+        lines.append(f'{supplier_link(s)} — qarzimiz: {som(s.get_total_debt())}')
+    bot.send_message(call.message.chat.id, '\n'.join(lines))
 
 
 @register_command('sup')
@@ -82,7 +63,7 @@ def creditors(call, tg_user):
         return
     lines = ['💰 Kreditor qarzdorlik:', '']
     for r in rows[:50]:
-        lines.append(f"{r['supplier'].name}: {som(r['debt'])}")
+        lines.append(f"{supplier_link(r['supplier'])}: {som(r['debt'])}")
     bot.send_message(call.message.chat.id, '\n'.join(lines))
 
 

@@ -169,7 +169,13 @@ WSGI fayliga (6-bo'limdagi kabi) qo'shimcha uchta qator:
 os.environ['TELEGRAM_BOT_TOKEN'] = 'BOT_TOKEN_SHU_YERGA'
 os.environ['ADMINS'] = '7757735418'
 os.environ['HOST'] = '<username>.pythonanywhere.com'
+os.environ['TELEGRAM_BOT_USERNAME'] = 'bot_useri_nomi'   # ixtiyoriy, @ siz
 ```
+
+`TELEGRAM_BOT_USERNAME` — ro'yxatlarda mijoz/yetkazib beruvchi ismini
+bosiladigan havolaga aylantirish uchun ishlatiladi (`apps/bot/links.py`).
+Ko'rsatilmasa bot username'ini Telegram'dan o'zi bir marta so'rab oladi;
+uni ochiq yozib qo'yish faqat bitta ortiqcha tarmoq so'rovini tejaydi.
 
 Webhook qo'lda o'rnatish shart emas — `apps/bot/views.py` import qilinganda
 (ya'ni har safar server/worker qayta ishga tushganda: **Reload** bosilganda,

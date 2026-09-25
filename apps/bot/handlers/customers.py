@@ -10,7 +10,8 @@ from apps.bot.formatters import date_fmt, som
 from apps.bot import statements
 from apps.bot.handlers.common import register_command, register_menu
 from apps.bot.inputs import is_skip, parse_decimal
-from apps.bot.pickers import register_pagination, send_picker
+from apps.bot.links import customer_link
+from apps.bot.pickers import send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.customers.models import Customer
 from apps.payments.models import active_payments
@@ -27,17 +28,6 @@ def customers_menu(message, tg_user):
     bot.send_message(message.chat.id, 'Mijozlar bo\'limi:', reply_markup=kb)
 
 
-def _akt_list_items():
-    """Akt-sverka tugmalari uchun ro'yxat (sahifalash ham shundan oladi)."""
-    return [
-        (c.id, f'{c.name} — {som(c.get_total_debt())}')
-        for c in Customer.objects.filter(active=True).order_by('name')[:50]
-    ]
-
-
-register_pagination('cust_akt', _akt_list_items)
-
-
 @register_callback('custlist')
 def list_customers(call, tg_user):
     bot.answer_callback_query(call.id)
@@ -45,19 +35,10 @@ def list_customers(call, tg_user):
     if not customers:
         bot.send_message(call.message.chat.id, "Mijozlar yo'q.")
         return
-    lines = ['👥 Mijozlar', 'Nomiga yoki buyrug\'iga bossangiz akt-sverka keladi.', '']
+    lines = ['👥 Mijozlar', 'Ism ustiga bossangiz akt-sverka keladi.', '']
     for c in customers:
-        lines.append(f'{c.name} — qarz: {som(c.get_total_debt())}\n   /mij_{c.id}')
-    bot.send_message(
-        call.message.chat.id, '\n'.join(lines),
-        reply_markup=keyboards.picker('cust_akt', _akt_list_items()),
-    )
-
-
-@register_callback('cust_akt')
-def send_akt_callback(call, tg_user):
-    bot.answer_callback_query(call.id, 'Akt-sverka tayyorlanmoqda...')
-    _send_akt(call.message.chat.id, int(call.data.split(':', 1)[1]))
+        lines.append(f'{customer_link(c)} — qarz: {som(c.get_total_debt())}')
+    bot.send_message(call.message.chat.id, '\n'.join(lines))
 
 
 @register_command('mij')
@@ -83,7 +64,7 @@ def debtors(call, tg_user):
         return
     lines = ['💰 Qarzdorlar:', '']
     for r in rows[:50]:
-        lines.append(f"{r['customer'].name}: {som(r['debt'])}")
+        lines.append(f"{customer_link(r['customer'])}: {som(r['debt'])}")
     bot.send_message(call.message.chat.id, '\n'.join(lines))
 
 

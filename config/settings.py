@@ -92,6 +92,9 @@ INSTALLED_APPS = [
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_ADMIN_IDS = [a.strip() for a in os.environ.get('ADMINS', '').split(',') if a.strip()]
 TELEGRAM_WEBHOOK_HOST = os.environ.get('HOST', '')
+# Ism ortiga yashiringan havolalar (t.me/<username>?start=...) uchun kerak.
+# Ko'rsatilmasa bot o'zining username'ini Telegram'dan bir marta so'rab oladi.
+TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', '')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

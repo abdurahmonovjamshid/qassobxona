@@ -16,6 +16,7 @@ from apps.bot.bot_instance import bot
 from apps.bot.formatters import date_fmt, errors_to_text, som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal
+from apps.bot.links import customer_link, supplier_link
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.models import Payment
@@ -182,7 +183,7 @@ def list_payments(call, tg_user):
         bot.send_message(call.message.chat.id, "Hozircha to'lovlar yo'q.")
         return
     for p in payments:
-        party = p.customer.name if p.customer else p.supplier.name
+        party = customer_link(p.customer) if p.customer else supplier_link(p.supplier)
         arrow = '⬅️' if p.is_incoming else '➡️'
         text = f"{arrow} {party} — {som(p.amount)} ({p.get_payment_type_display()})\n{date_fmt(p.date)}"
         from telebot import types

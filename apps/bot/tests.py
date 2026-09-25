@@ -260,20 +260,30 @@ def _recording_response():
     return sent, _fake
 
 
-def _fake_message(text, telegram_id=1, chat_id=1):
+def _fake_message(text, telegram_id=1, chat_id=1, message_id=99):
     return SimpleNamespace(
         text=text,
+        message_id=message_id,
         chat=SimpleNamespace(id=chat_id),
         from_user=SimpleNamespace(id=telegram_id),
     )
 
 
+BOT_USERNAME = 'qassobxona_test_bot'
+
+
 @patch('telebot.apihelper._make_request')
-class StatementFromListTests(TestCase):
-    """Ro'yxatdagi nom (tugma) yoki `/sup_N` buyrug'i bosilganda to'liq
-    akt-sverka .xlsx fayl sifatida yuborilishi."""
+class StatementFromNameLinkTests(TestCase):
+    """Ro'yxatdagi ismning o'zi bosiladigan havola bo'ladi va bosilganda
+    to'liq akt-sverka .xlsx fayl sifatida keladi. Buyruqning o'zi ko'rinmaydi
+    — Telegram yuborgan `/start sup_12` xabari darhol o'chiriladi."""
 
     def setUp(self):
+        from apps.bot import links
+        # Username'ni Telegram'dan so'ramasligi uchun keshni oldindan to'ldiramiz.
+        links._username_cache = BOT_USERNAME
+        self.addCleanup(setattr, links, '_username_cache', None)
+
         self.tg_user = TgUser.objects.create(telegram_id=1)
         self.supplier = Supplier.objects.create(name='Abdulloh fermer')
         self.customer = Customer.objects.create(name='Ali aka', opening_balance=Decimal('250000'))
@@ -286,20 +296,22 @@ class StatementFromListTests(TestCase):
     def _documents(self, sent):
         return [c for c in sent if c['method'] == 'sendDocument']
 
-    def test_supplier_list_contains_command_and_buttons(self, mock_req):
+    def test_name_is_a_link_and_command_is_hidden(self, mock_req):
         from apps.bot.handlers import suppliers as supplier_handlers
         sent, fake = _recording_response()
         mock_req.side_effect = fake
 
         supplier_handlers.list_suppliers(_fake_call(), self.tg_user)
 
-        message = [c for c in sent if c['method'] == 'sendMessage'][-1]
-        self.assertIn(f'/sup_{self.supplier.id}', message['params']['text'])
-        # Nomning o'ziga bosish uchun inline tugmalar ham bo'lishi kerak.
-        self.assertIn(self.supplier.name, message['params']['reply_markup'])
-        self.assertIn(f'sup_akt:{self.supplier.id}', message['params']['reply_markup'])
+        text = [c for c in sent if c['method'] == 'sendMessage'][-1]['params']['text']
+        self.assertIn(
+            f'<a href="https://t.me/{BOT_USERNAME}?start=sup_{self.supplier.id}">Abdulloh fermer</a>',
+            text,
+        )
+        # Ochiq buyruq ham, tugmalar ham ko'rinmasligi kerak.
+        self.assertNotIn(f'/sup_{self.supplier.id}', text)
 
-    def test_supplier_command_sends_statement_file(self, mock_req):
+    def test_tapping_name_sends_statement_and_deletes_command(self, mock_req):
         import io
 
         from openpyxl import load_workbook
@@ -308,56 +320,89 @@ class StatementFromListTests(TestCase):
         sent, fake = _recording_response()
         mock_req.side_effect = fake
 
-        common.on_text(_fake_message(f'/sup_{self.supplier.id}'))
+        common.on_text(_fake_message(f'/start sup_{self.supplier.id}'))
 
         docs = self._documents(sent)
         self.assertEqual(len(docs), 1)
         filename, content = docs[0]['files']['document']
         self.assertTrue(filename.endswith('.xlsx'))
-        workbook = load_workbook(io.BytesIO(content))
-        self.assertEqual(workbook.sheetnames, ['Yetkazib beruvchi (xarid)'])
+        self.assertEqual(load_workbook(io.BytesIO(content)).sheetnames, ['Yetkazib beruvchi (xarid)'])
+        # Foydalanuvchi nomidan yuborilgan texnik buyruq o'chirilgan bo'lishi kerak.
+        self.assertTrue(any(c['method'] == 'deleteMessage' for c in sent))
 
-    def test_supplier_button_sends_statement_file(self, mock_req):
-        from apps.bot.handlers import suppliers as supplier_handlers
-        sent, fake = _recording_response()
-        mock_req.side_effect = fake
-
-        call = _fake_call()
-        call.data = f'sup_akt:{self.supplier.id}'
-        supplier_handlers.send_akt_callback(call, self.tg_user)
-
-        self.assertEqual(len(self._documents(sent)), 1)
-
-    def test_customer_command_sends_statement_file(self, mock_req):
+    def test_customer_name_link_sends_statement(self, mock_req):
         from apps.bot.handlers import common
         sent, fake = _recording_response()
         mock_req.side_effect = fake
 
-        common.on_text(_fake_message(f'/mij_{self.customer.id}'))
+        common.on_text(_fake_message(f'/start mij_{self.customer.id}'))
 
         self.assertEqual(len(self._documents(sent)), 1)
 
-    def test_command_works_even_mid_conversation(self, mock_req):
-        """Yarim tugallangan oqimda qolib ketgan foydalanuvchi uchun ham
-        ro'yxatdagi buyruq ishlashi kerak."""
+    def test_plain_command_still_works(self, mock_req):
+        """Bot username'i noma'lum bo'lgan holat uchun zaxira ko'rinish."""
+        from apps.bot.handlers import common
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        common.on_text(_fake_message(f'/sup_{self.supplier.id}'))
+
+        self.assertEqual(len(self._documents(sent)), 1)
+
+    def test_link_falls_back_to_plain_command_without_username(self, mock_req):
+        from apps.bot import links
+        from apps.bot.handlers import suppliers as supplier_handlers
+        links._username_cache = ''
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        supplier_handlers.list_suppliers(_fake_call(), self.tg_user)
+
+        text = [c for c in sent if c['method'] == 'sendMessage'][-1]['params']['text']
+        self.assertNotIn('<a href', text)
+        self.assertIn(f'/sup_{self.supplier.id}', text)
+
+    def test_name_with_html_characters_is_escaped(self, mock_req):
+        from apps.bot.handlers import suppliers as supplier_handlers
+        Supplier.objects.create(name='Aka & Uka <Ferma>')
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        supplier_handlers.list_suppliers(_fake_call(), self.tg_user)
+
+        text = [c for c in sent if c['method'] == 'sendMessage'][-1]['params']['text']
+        self.assertIn('Aka &amp; Uka &lt;Ferma&gt;', text)
+
+    def test_link_works_even_mid_conversation(self, mock_req):
         from apps.bot.handlers import common
         self.tg_user.state = 'pay.amount'
         self.tg_user.save(update_fields=['state'])
         sent, fake = _recording_response()
         mock_req.side_effect = fake
 
-        common.on_text(_fake_message(f'/sup_{self.supplier.id}'))
+        common.on_text(_fake_message(f'/start sup_{self.supplier.id}'))
 
         self.assertEqual(len(self._documents(sent)), 1)
         self.tg_user.refresh_from_db()
         self.assertEqual(self.tg_user.state, '')
+
+    def test_plain_start_still_shows_menu(self, mock_req):
+        """`/start` (parametrsiz) avvalgidek salomlashish xabarini berishi kerak."""
+        from apps.bot.handlers import common
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        common.on_text(_fake_message('/start'))
+
+        self.assertEqual(self._documents(sent), [])
+        self.assertIn('Assalomu alaykum', sent[-1]['params']['text'])
 
     def test_unknown_id_replies_without_file(self, mock_req):
         from apps.bot.handlers import common
         sent, fake = _recording_response()
         mock_req.side_effect = fake
 
-        common.on_text(_fake_message('/sup_999999'))
+        common.on_text(_fake_message('/start sup_999999'))
 
         self.assertEqual(self._documents(sent), [])
         self.assertIn('topilmadi', sent[-1]['params']['text'])

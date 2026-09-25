@@ -19,6 +19,7 @@ from apps.bot.formatters import pieces as pieces_fmt
 from apps.bot.formatters import som
 from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal, parse_int
+from apps.bot.links import customer_link
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.services import payment_service
@@ -309,7 +310,7 @@ def _on_list_date_picked(call, tg_user, picked):
 
     for s in sales:
         lines = [
-            f"{s.sale_number} — {s.customer.name}",
+            f"{s.sale_number} — {customer_link(s.customer)}",
             f"{date_fmt(s.date)} | {s.get_status_display()}",
             '',
             'Mahsulotlar:',
@@ -417,5 +418,5 @@ def due_sales(call, tg_user):
         return
     lines = ["⏰ Muddati o'tgan qarzli sotuvlar:", '']
     for s in sales[:30]:
-        lines.append(f"{s.sale_number} — {s.customer.name} | muddat: {date_fmt(s.due_date)} | qarz: {som(s.debt_amount)}")
+        lines.append(f"{s.sale_number} — {customer_link(s.customer)} | muddat: {date_fmt(s.due_date)} | qarz: {som(s.debt_amount)}")
     bot.send_message(call.message.chat.id, '\n'.join(lines))
