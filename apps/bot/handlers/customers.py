@@ -7,9 +7,10 @@ from decimal import Decimal
 from apps.bot import keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.formatters import date_fmt, som
-from apps.bot.handlers.common import register_menu
+from apps.bot import statements
+from apps.bot.handlers.common import register_command, register_menu
 from apps.bot.inputs import is_skip, parse_decimal
-from apps.bot.pickers import send_picker
+from apps.bot.pickers import register_pagination, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.customers.models import Customer
 from apps.payments.models import active_payments
@@ -26,17 +27,50 @@ def customers_menu(message, tg_user):
     bot.send_message(message.chat.id, 'Mijozlar bo\'limi:', reply_markup=kb)
 
 
+def _akt_list_items():
+    """Akt-sverka tugmalari uchun ro'yxat (sahifalash ham shundan oladi)."""
+    return [
+        (c.id, f'{c.name} — {som(c.get_total_debt())}')
+        for c in Customer.objects.filter(active=True).order_by('name')[:50]
+    ]
+
+
+register_pagination('cust_akt', _akt_list_items)
+
+
 @register_callback('custlist')
 def list_customers(call, tg_user):
     bot.answer_callback_query(call.id)
-    customers = Customer.objects.filter(active=True).order_by('name')[:50]
+    customers = list(Customer.objects.filter(active=True).order_by('name')[:50])
     if not customers:
         bot.send_message(call.message.chat.id, "Mijozlar yo'q.")
         return
-    lines = ['👥 Mijozlar:', '']
+    lines = ['👥 Mijozlar', 'Nomiga yoki buyrug\'iga bossangiz akt-sverka keladi.', '']
     for c in customers:
-        lines.append(f'{c.name} — qarz: {som(c.get_total_debt())}')
-    bot.send_message(call.message.chat.id, '\n'.join(lines))
+        lines.append(f'{c.name} — qarz: {som(c.get_total_debt())}\n   /mij_{c.id}')
+    bot.send_message(
+        call.message.chat.id, '\n'.join(lines),
+        reply_markup=keyboards.picker('cust_akt', _akt_list_items()),
+    )
+
+
+@register_callback('cust_akt')
+def send_akt_callback(call, tg_user):
+    bot.answer_callback_query(call.id, 'Akt-sverka tayyorlanmoqda...')
+    _send_akt(call.message.chat.id, int(call.data.split(':', 1)[1]))
+
+
+@register_command('mij')
+def send_akt_command(message, tg_user, customer_id):
+    _send_akt(message.chat.id, customer_id)
+
+
+def _send_akt(chat_id, customer_id):
+    customer = Customer.objects.filter(pk=customer_id).first()
+    if customer is None:
+        bot.send_message(chat_id, "Bunday mijoz topilmadi.")
+        return
+    statements.send_customer_statement(chat_id, customer)
 
 
 @register_callback('custdebt')

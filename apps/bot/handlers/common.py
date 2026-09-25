@@ -13,6 +13,7 @@ from apps.bot.models import TgUser
 from apps.bot.state import dispatch_callback, dispatch_text
 
 MENU_ROUTES = {}
+COMMAND_ROUTES = {}
 
 
 def register_menu(text):
@@ -20,6 +21,30 @@ def register_menu(text):
         MENU_ROUTES[text] = fn
         return fn
     return decorator
+
+
+def register_command(prefix):
+    """Parametrli matnli buyruqni ro'yxatdan o'tkazadi, masalan `/sup_12`.
+
+    Ro'yxatlarda har bir nom yoniga shunday buyruq qo'yiladi — Telegram
+    `/...` bilan boshlangan so'zni avtomatik bosiladigan qiladi, shuning
+    uchun uzun ro'yxatda ham tugmasiz tanlash mumkin bo'ladi.
+    `prefix` — "sup" yoki "cust"; handler `(message, tg_user, obj_id)`
+    ko'rinishida chaqiriladi."""
+    def decorator(fn):
+        COMMAND_ROUTES[prefix] = fn
+        return fn
+    return decorator
+
+
+def _parse_command(text):
+    """"/sup_12" -> ("sup", 12). Mos kelmasa (None, None)."""
+    if not text.startswith('/') or '_' not in text:
+        return None, None
+    prefix, _, raw_id = text[1:].partition('_')
+    if prefix not in COMMAND_ROUTES or not raw_id.isdigit():
+        return None, None
+    return prefix, int(raw_id)
 
 
 def get_tg_user(telegram_id) -> TgUser:
@@ -47,6 +72,15 @@ def on_text(message):
     if message.text == keyboards.CANCEL_TEXT:
         tg_user.reset_state()
         send_main_menu(message.chat.id, 'Bekor qilindi.')
+        return
+
+    # Parametrli buyruq (/sup_12) — /start kabi joriy oqimdan ustun turadi,
+    # aks holda yarim tugallangan holatda qolib ketgan foydalanuvchi uchun
+    # ro'yxatdagi havolalar ishlamay qolardi.
+    command_prefix, obj_id = _parse_command(message.text)
+    if command_prefix:
+        tg_user.reset_state()
+        COMMAND_ROUTES[command_prefix](message, tg_user, obj_id)
         return
 
     if tg_user.state and dispatch_text(message, tg_user):

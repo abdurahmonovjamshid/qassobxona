@@ -1,6 +1,8 @@
 """Akt-sverka (statement) natijasini .xlsx faylga aylantirish uchun umumiy
 yordamchi. `apps/reports/services/statement_service.py` qaytargan
 dict'lardan (`opening_balance`, `rows`, `closing_balance`) foydalanadi."""
+from io import BytesIO
+
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from django.http import HttpResponse
@@ -38,18 +40,31 @@ def _write_sheet(ws, title, statement):
         ws.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 12), 40)
 
 
-def statement_to_response(*, filename, sections):
+def _build_statement_workbook(sections):
     """`sections` — [(sheet_title, statement_dict), ...]. Kamida bitta bo'lishi kerak."""
     wb = Workbook()
     for i, (title, statement) in enumerate(sections):
         ws = wb.active if i == 0 else wb.create_sheet()
         ws.title = title[:31]
         _write_sheet(ws, title, statement)
+    return wb
 
+
+def statement_to_response(*, filename, sections):
+    """Brauzerga yuklab beriladigan .xlsx javobi."""
+    wb = _build_statement_workbook(sections)
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+
+def statement_to_bytes(*, sections) -> bytes:
+    """Xuddi shu .xlsx, lekin HTTP javobi emas, xotiradagi baytlar sifatida —
+    Telegram bot `send_document` bilan yuborishi uchun."""
+    buffer = BytesIO()
+    _build_statement_workbook(sections).save(buffer)
+    return buffer.getvalue()
 
 
 def table_to_response(*, filename_prefix, headers, rows, sheet_title='Sheet1'):

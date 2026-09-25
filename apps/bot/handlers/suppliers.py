@@ -6,9 +6,10 @@ from decimal import Decimal
 from apps.bot import keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.formatters import date_fmt, som
-from apps.bot.handlers.common import register_menu
+from apps.bot import statements
+from apps.bot.handlers.common import register_command, register_menu
 from apps.bot.inputs import is_skip, parse_decimal
-from apps.bot.pickers import send_picker
+from apps.bot.pickers import register_pagination, send_picker
 from apps.bot.state import register_callback, register_state, set_state
 from apps.payments.models import active_payments
 from apps.suppliers.models import Supplier
@@ -25,17 +26,50 @@ def suppliers_menu(message, tg_user):
     bot.send_message(message.chat.id, 'Yetkazib beruvchilar bo\'limi:', reply_markup=kb)
 
 
+def _akt_list_items():
+    """Akt-sverka tugmalari uchun ro'yxat (sahifalash ham shundan oladi)."""
+    return [
+        (s.id, f'{s.name} — {som(s.get_total_debt())}')
+        for s in Supplier.objects.filter(active=True).order_by('name')[:50]
+    ]
+
+
+register_pagination('sup_akt', _akt_list_items)
+
+
 @register_callback('suplist')
 def list_suppliers(call, tg_user):
     bot.answer_callback_query(call.id)
-    suppliers = Supplier.objects.filter(active=True).order_by('name')[:50]
+    suppliers = list(Supplier.objects.filter(active=True).order_by('name')[:50])
     if not suppliers:
         bot.send_message(call.message.chat.id, "Yetkazib beruvchilar yo'q.")
         return
-    lines = ['🚚 Yetkazib beruvchilar:', '']
+    lines = ['🚚 Yetkazib beruvchilar', 'Nomiga yoki buyrug\'iga bossangiz akt-sverka keladi.', '']
     for s in suppliers:
-        lines.append(f'{s.name} — qarzimiz: {som(s.get_total_debt())}')
-    bot.send_message(call.message.chat.id, '\n'.join(lines))
+        lines.append(f'{s.name} — qarzimiz: {som(s.get_total_debt())}\n   /sup_{s.id}')
+    bot.send_message(
+        call.message.chat.id, '\n'.join(lines),
+        reply_markup=keyboards.picker('sup_akt', _akt_list_items()),
+    )
+
+
+@register_callback('sup_akt')
+def send_akt_callback(call, tg_user):
+    bot.answer_callback_query(call.id, 'Akt-sverka tayyorlanmoqda...')
+    _send_akt(call.message.chat.id, int(call.data.split(':', 1)[1]))
+
+
+@register_command('sup')
+def send_akt_command(message, tg_user, supplier_id):
+    _send_akt(message.chat.id, supplier_id)
+
+
+def _send_akt(chat_id, supplier_id):
+    supplier = Supplier.objects.filter(pk=supplier_id).first()
+    if supplier is None:
+        bot.send_message(chat_id, "Bunday yetkazib beruvchi topilmadi.")
+        return
+    statements.send_supplier_statement(chat_id, supplier)
 
 
 @register_callback('supdebt')

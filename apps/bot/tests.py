@@ -36,6 +36,8 @@ def _fake_response(token, method_url, method='get', params=None, files=None):
     params = params or {}
     if method_url == 'sendMessage':
         return {'message_id': 1, 'date': 0, 'chat': {'id': params.get('chat_id'), 'type': 'private'}, 'text': params.get('text', '')}
+    if method_url == 'sendDocument':
+        return {'message_id': 1, 'date': 0, 'chat': {'id': params.get('chat_id'), 'type': 'private'}}
     return True
 
 
@@ -245,3 +247,117 @@ class ExpenseFlowTests(TestCase):
 
         self.assertFalse(Expense.objects.filter(category=self.category).exists())
         self.assertEqual(cash_service.get_balance(), Decimal('1000000'))
+
+
+def _recording_response():
+    """`_make_request` o'rniga: yuborilgan chaqiruvlarni yozib boradi."""
+    sent = []
+
+    def _fake(token, method_url, method='get', params=None, files=None):
+        sent.append({'method': method_url, 'params': params or {}, 'files': files or {}})
+        return _fake_response(token, method_url, method, params, files)
+
+    return sent, _fake
+
+
+def _fake_message(text, telegram_id=1, chat_id=1):
+    return SimpleNamespace(
+        text=text,
+        chat=SimpleNamespace(id=chat_id),
+        from_user=SimpleNamespace(id=telegram_id),
+    )
+
+
+@patch('telebot.apihelper._make_request')
+class StatementFromListTests(TestCase):
+    """Ro'yxatdagi nom (tugma) yoki `/sup_N` buyrug'i bosilganda to'liq
+    akt-sverka .xlsx fayl sifatida yuborilishi."""
+
+    def setUp(self):
+        self.tg_user = TgUser.objects.create(telegram_id=1)
+        self.supplier = Supplier.objects.create(name='Abdulloh fermer')
+        self.customer = Customer.objects.create(name='Ali aka', opening_balance=Decimal('250000'))
+        Purchase.objects.create(
+            supplier=self.supplier, purchase_number='P-1', date='2026-01-10',
+            status=Purchase.Status.CONFIRMED, total_amount=Decimal('1000000'),
+            paid_amount=Decimal('0'),
+        )
+
+    def _documents(self, sent):
+        return [c for c in sent if c['method'] == 'sendDocument']
+
+    def test_supplier_list_contains_command_and_buttons(self, mock_req):
+        from apps.bot.handlers import suppliers as supplier_handlers
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        supplier_handlers.list_suppliers(_fake_call(), self.tg_user)
+
+        message = [c for c in sent if c['method'] == 'sendMessage'][-1]
+        self.assertIn(f'/sup_{self.supplier.id}', message['params']['text'])
+        # Nomning o'ziga bosish uchun inline tugmalar ham bo'lishi kerak.
+        self.assertIn(self.supplier.name, message['params']['reply_markup'])
+        self.assertIn(f'sup_akt:{self.supplier.id}', message['params']['reply_markup'])
+
+    def test_supplier_command_sends_statement_file(self, mock_req):
+        import io
+
+        from openpyxl import load_workbook
+
+        from apps.bot.handlers import common
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        common.on_text(_fake_message(f'/sup_{self.supplier.id}'))
+
+        docs = self._documents(sent)
+        self.assertEqual(len(docs), 1)
+        filename, content = docs[0]['files']['document']
+        self.assertTrue(filename.endswith('.xlsx'))
+        workbook = load_workbook(io.BytesIO(content))
+        self.assertEqual(workbook.sheetnames, ['Yetkazib beruvchi (xarid)'])
+
+    def test_supplier_button_sends_statement_file(self, mock_req):
+        from apps.bot.handlers import suppliers as supplier_handlers
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        call = _fake_call()
+        call.data = f'sup_akt:{self.supplier.id}'
+        supplier_handlers.send_akt_callback(call, self.tg_user)
+
+        self.assertEqual(len(self._documents(sent)), 1)
+
+    def test_customer_command_sends_statement_file(self, mock_req):
+        from apps.bot.handlers import common
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        common.on_text(_fake_message(f'/mij_{self.customer.id}'))
+
+        self.assertEqual(len(self._documents(sent)), 1)
+
+    def test_command_works_even_mid_conversation(self, mock_req):
+        """Yarim tugallangan oqimda qolib ketgan foydalanuvchi uchun ham
+        ro'yxatdagi buyruq ishlashi kerak."""
+        from apps.bot.handlers import common
+        self.tg_user.state = 'pay.amount'
+        self.tg_user.save(update_fields=['state'])
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        common.on_text(_fake_message(f'/sup_{self.supplier.id}'))
+
+        self.assertEqual(len(self._documents(sent)), 1)
+        self.tg_user.refresh_from_db()
+        self.assertEqual(self.tg_user.state, '')
+
+    def test_unknown_id_replies_without_file(self, mock_req):
+        from apps.bot.handlers import common
+        sent, fake = _recording_response()
+        mock_req.side_effect = fake
+
+        common.on_text(_fake_message('/sup_999999'))
+
+        self.assertEqual(self._documents(sent), [])
+        self.assertIn('topilmadi', sent[-1]['params']['text'])
