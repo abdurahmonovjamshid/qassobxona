@@ -95,8 +95,11 @@ def cancel_purchase(purchase: Purchase, *, user=None) -> Purchase:
 
 
 def recalc_purchase_payment(purchase: Purchase) -> Purchase:
-    """Purchase'ga bog'langan barcha Payment'lar yig'indisi asosida paid/debt'ni yangilaydi."""
-    paid = purchase.payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+    """Purchase'ga bog'langan barcha Payment'lar yig'indisi asosida paid/debt'ni
+    yangilaydi. Yetkazib beruvchidan qaytarib olingan pul (IN) to'langan
+    summadan ayiriladi."""
+    from apps.payments.models import Payment, net_payment_sum
+    paid = net_payment_sum(purchase.payments, positive_direction=Payment.Direction.OUT)
     purchase.paid_amount = paid
     purchase.save(update_fields=['paid_amount', 'debt_amount', 'updated_at'])
     return purchase

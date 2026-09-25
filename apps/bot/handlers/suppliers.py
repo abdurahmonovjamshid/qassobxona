@@ -10,6 +10,7 @@ from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal
 from apps.bot.pickers import send_picker
 from apps.bot.state import register_callback, register_state, set_state
+from apps.payments.models import active_payments
 from apps.suppliers.models import Supplier
 
 
@@ -82,7 +83,7 @@ def pick_search_result(call, tg_user):
 def _send_detail(chat_id, supplier):
     from apps.purchases.models import Purchase
     purchases = supplier.purchases.exclude(status=Purchase.Status.CANCELLED)
-    payments = supplier.payments.all()
+    payments = active_payments(supplier.payments)
 
     history = []
     if supplier.opening_balance:
@@ -90,7 +91,11 @@ def _send_detail(chat_id, supplier):
     for purchase in purchases:
         history.append((purchase.date, f'Xarid {purchase.purchase_number}', purchase.total_amount))
     for payment in payments:
-        history.append((payment.date, "To'lov", -payment.amount))
+        # Undan qaytarib olingan pul qarzimizni oshiradi, shuning uchun musbat.
+        if payment.is_incoming:
+            history.append((payment.date, 'Qaytarib olindi', payment.amount))
+        else:
+            history.append((payment.date, "To'lov", -payment.amount))
     history.sort(key=lambda h: h[0])
 
     lines = [

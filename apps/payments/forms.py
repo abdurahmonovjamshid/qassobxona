@@ -10,8 +10,9 @@ from apps.suppliers.models import Supplier
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ['payment_type', 'amount', 'date', 'customer', 'supplier', 'sale', 'purchase', 'notes']
+        fields = ['direction', 'payment_type', 'amount', 'date', 'customer', 'supplier', 'sale', 'purchase', 'notes']
         widgets = {
+            'direction': forms.Select(attrs={'class': 'form-select'}),
             'payment_type': forms.Select(attrs={'class': 'form-select'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),

@@ -30,17 +30,23 @@ register_pagination('pay_ptype', lambda: choices.PAYMENT_TYPES)
 def payments_menu(message, tg_user):
     from telebot import types
     kb = types.InlineKeyboardMarkup()
-    kb.row(types.InlineKeyboardButton('👥 Mijozdan to\'lov', callback_data='paynew:customer'))
-    kb.row(types.InlineKeyboardButton('🚚 Yetkazib beruvchiga to\'lov', callback_data='paynew:supplier'))
+    kb.row(types.InlineKeyboardButton('👥 Mijozdan to\'lov', callback_data='paynew:customer:IN'))
+    kb.row(types.InlineKeyboardButton('🚚 Yetkazib beruvchiga to\'lov', callback_data='paynew:supplier:OUT'))
+    kb.row(types.InlineKeyboardButton('🚚 Yetkazib beruvchidan pul olish', callback_data='paynew:supplier:IN'))
+    kb.row(types.InlineKeyboardButton('👥 Mijozga pul qaytarish', callback_data='paynew:customer:OUT'))
     kb.row(types.InlineKeyboardButton("📋 So'nggi to'lovlar", callback_data='paylist:0'))
     bot.send_message(message.chat.id, "To'lov bo'limi:", reply_markup=kb)
 
 
 @register_callback('paynew')
 def start_payment(call, tg_user):
-    party_type = call.data.split(':', 1)[1]
+    parts = call.data.split(':')
+    party_type = parts[1]
+    # Yo'nalish tugmaning o'zida keladi; ko'rsatilmasa odatdagisi olinadi
+    # (mijozdan olamiz, yetkazib beruvchiga to'laymiz).
+    direction = parts[2] if len(parts) > 2 else ('IN' if party_type == 'customer' else 'OUT')
     bot.answer_callback_query(call.id)
-    set_state(tg_user, 'pay.picking_party', party_type=party_type)
+    set_state(tg_user, 'pay.picking_party', party_type=party_type, direction=direction)
     if party_type == 'customer':
         send_picker(call.message.chat.id, 'pay_cust', choices.active_customers(), 'Mijozni tanlang:')
     else:
@@ -113,8 +119,10 @@ def on_notes(message, tg_user):
 def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     party_label = 'Mijoz' if data['party_type'] == 'customer' else 'Yetkazib beruvchi'
+    incoming = data.get('direction', 'IN') == 'IN'
     lines = [
         f'{party_label}: {data["party_name"]}',
+        f"Yo'nalish: {'⬅️ Pul bizga keldi' if incoming else '➡️ Pul bizdan ketdi'}",
         f"Summa: {som(data['amount'])}",
         f"To'lov turi: {dict(choices.PAYMENT_TYPES).get(data['payment_type'], data['payment_type'])}",
         f"Sana: {date_fmt(data['date'])}",
@@ -150,7 +158,7 @@ def confirm_payment(call, tg_user):
 
         payment = payment_service.create_payment(
             amount=Decimal(data['amount']), payment_type=data['payment_type'], date=data['date'],
-            notes=data.get('notes', ''), user=user,
+            direction=data.get('direction'), notes=data.get('notes', ''), user=user,
             customer=customer, supplier=supplier, sale=sale, purchase=purchase,
         )
         tg_user.reset_state()
@@ -175,7 +183,8 @@ def list_payments(call, tg_user):
         return
     for p in payments:
         party = p.customer.name if p.customer else p.supplier.name
-        text = f"{party} — {som(p.amount)} ({p.get_payment_type_display()})\n{date_fmt(p.date)}"
+        arrow = '⬅️' if p.is_incoming else '➡️'
+        text = f"{arrow} {party} — {som(p.amount)} ({p.get_payment_type_display()})\n{date_fmt(p.date)}"
         from telebot import types
         kb = types.InlineKeyboardMarkup()
         kb.row(types.InlineKeyboardButton('❌ Bekor qilish (o\'chirish)', callback_data=f'paycancel:{p.pk}'))

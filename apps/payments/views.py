@@ -14,9 +14,12 @@ from apps.payments.services import payment_service
 def payment_list(request):
     payments = Payment.objects.select_related('customer', 'supplier', 'sale', 'purchase').all()
     payment_type = request.GET.get('payment_type')
+    direction = request.GET.get('direction')
     date_from, date_to = get_date_range(request)
     if payment_type:
         payments = payments.filter(payment_type=payment_type)
+    if direction:
+        payments = payments.filter(direction=direction)
     if date_from:
         payments = payments.filter(date__gte=date_from)
     if date_to:
@@ -25,6 +28,7 @@ def payment_list(request):
     return render(request, 'payments/list.html', {
         'payments': payments[:200],
         'payment_types': Payment.PaymentType.choices,
+        'directions': Payment.Direction.choices,
         'date_from': date_from,
         'date_to': date_to,
     })
@@ -39,6 +43,7 @@ def payment_create(request):
             try:
                 payment_service.create_payment(
                     amount=data['amount'], payment_type=data['payment_type'], date=data['date'],
+                    direction=data['direction'],
                     customer=data.get('customer'), supplier=data.get('supplier'),
                     sale=data.get('sale'), purchase=data.get('purchase'),
                     notes=data.get('notes', ''), user=request.user,
@@ -61,6 +66,15 @@ def payment_create(request):
             value = request.GET.get(key)
             if value:
                 initial[key] = value
+        # Yo'nalish havolada ko'rsatilsa (masalan "Undan pul olish" tugmasi)
+        # o'shani, aks holda tomonga qarab odatdagisini oldindan tanlaymiz.
+        direction = request.GET.get('direction')
+        if direction in Payment.Direction.values:
+            initial['direction'] = direction
+        elif request.GET.get('supplier') or request.GET.get('purchase'):
+            initial['direction'] = Payment.Direction.OUT
+        else:
+            initial['direction'] = Payment.Direction.IN
         form = PaymentForm(initial=initial)
 
     return render(request, 'payments/form.html', {'form': form})

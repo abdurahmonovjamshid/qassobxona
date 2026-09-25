@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum
 from django.utils import timezone
 
 from apps.inventory.models import StockMovement
@@ -100,8 +99,10 @@ def get_due_sales():
 
 
 def recalc_sale_payment(sale: Sale) -> Sale:
-    """Sale'ga bog'langan barcha Payment'lar yig'indisi asosida paid/debt'ni yangilaydi."""
-    paid = sale.payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+    """Sale'ga bog'langan barcha Payment'lar yig'indisi asosida paid/debt'ni
+    yangilaydi. Mijozga qaytarilgan pul (OUT) to'langan summadan ayiriladi."""
+    from apps.payments.models import Payment, net_payment_sum
+    paid = net_payment_sum(sale.payments, positive_direction=Payment.Direction.IN)
     sale.paid_amount = paid
     sale.save(update_fields=['paid_amount', 'debt_amount', 'updated_at'])
     return sale

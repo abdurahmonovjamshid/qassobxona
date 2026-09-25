@@ -12,6 +12,8 @@ class CashTransaction(models.Model):
         OPENING = 'OPENING', "Boshlang'ich balans"
         SALE_PAYMENT = 'SALE_PAYMENT', "Mijozdan naqd to'lov"
         PURCHASE_PAYMENT = 'PURCHASE_PAYMENT', "Yetkazib beruvchiga naqd to'lov"
+        SALE_REFUND = 'SALE_REFUND', "Mijozga naqd qaytarim"
+        PURCHASE_REFUND = 'PURCHASE_REFUND', "Yetkazib beruvchidan naqd qaytarim"
         EXPENSE = 'EXPENSE', 'Xarajat'
         ADJUSTMENT = 'ADJUSTMENT', "Qo'lda tuzatish (admin)"
 

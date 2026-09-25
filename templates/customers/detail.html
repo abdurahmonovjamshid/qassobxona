@@ -48,7 +48,7 @@
                             </div>
                         {% endif %}
                     </td>
-                    <td class="text-end {% if h.kind == 'payment' %}text-success{% endif %}">
+                    <td class="text-end {% if h.kind == 'payment' %}text-success{% elif h.kind == 'refund' %}text-warning{% endif %}">
                         {% if h.kind == 'payment' %}-{% else %}+{% endif %}{{ h.amount|uzsum }}
                     </td>
                 </tr>

@@ -11,17 +11,28 @@ def _reference(payment: Payment) -> str:
     return f'PAYMENT:{payment.pk}'
 
 
+def _cash_transaction_type(payment: Payment) -> str:
+    """Kassa yozuvining turi tomon (mijoz/yetkazib beruvchi) va yo'nalishdan
+    kelib chiqadi. Odatdagi yo'nalish to'lov, teskarisi qaytarim deb yoziladi
+    — shunda kassa tarixida yozuvning nomi ham ishorasiga mos keladi."""
+    if payment.customer_id:
+        return (CashTransaction.TransactionType.SALE_PAYMENT if payment.is_incoming
+                else CashTransaction.TransactionType.SALE_REFUND)
+    return (CashTransaction.TransactionType.PURCHASE_REFUND if payment.is_incoming
+            else CashTransaction.TransactionType.PURCHASE_PAYMENT)
+
+
 def apply_cash_effect(payment: Payment, *, user=None) -> None:
     if payment.payment_type != Payment.PaymentType.CASH:
         return
-    if payment.customer_id:
+    if payment.is_incoming:
         cash_service.record_cash_in(
-            amount=payment.amount, transaction_type=CashTransaction.TransactionType.SALE_PAYMENT,
+            amount=payment.amount, transaction_type=_cash_transaction_type(payment),
             date=payment.date, reference=_reference(payment), created_by=user,
         )
     else:
         cash_service.record_cash_out(
-            amount=payment.amount, transaction_type=CashTransaction.TransactionType.PURCHASE_PAYMENT,
+            amount=payment.amount, transaction_type=_cash_transaction_type(payment),
             date=payment.date, reference=_reference(payment), created_by=user,
         )
 
@@ -29,10 +40,10 @@ def apply_cash_effect(payment: Payment, *, user=None) -> None:
 def _reverse_cash_effect(payment: Payment, *, user=None) -> None:
     if payment.payment_type != Payment.PaymentType.CASH:
         return
-    if payment.customer_id:
-        # Mijozdan olingan naqd to'lov o'chirilyapti — bu avval kassaga kirim
-        # bo'lgan edi, endi teskarisi (chiqim) yoziladi. Balans yetarli
-        # bo'lmasa ham amalga oshadi (bu tuzatish, yangi xarajat emas).
+    if payment.is_incoming:
+        # Kassaga kirim bo'lgan to'lov o'chirilyapti — endi teskarisi (chiqim)
+        # yoziladi. Balans yetarli bo'lmasa ham amalga oshadi (bu tuzatish,
+        # yangi xarajat emas).
         cash_service.record_cash_out(
             amount=payment.amount, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
             date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user,
@@ -45,9 +56,15 @@ def _reverse_cash_effect(payment: Payment, *, user=None) -> None:
         )
 
 
+def default_direction(*, customer=None, supplier=None) -> str:
+    """Odatdagi yo'nalish: mijozdan pul olamiz, yetkazib beruvchiga to'laymiz.
+    Chaqiruvchi yo'nalishni ko'rsatmasa shu ishlatiladi."""
+    return Payment.Direction.OUT if supplier else Payment.Direction.IN
+
+
 @transaction.atomic
 def create_payment(*, amount, payment_type, date, customer=None, supplier=None,
-                    sale=None, purchase=None, notes='', user=None) -> Payment:
+                    sale=None, purchase=None, notes='', user=None, direction=None) -> Payment:
     """To'lov yaratadi, tegishli Sale/Purchase qarzini qayta hisoblaydi va
     (naqd bo'lsa) kassa balansini yangilaydi."""
     if amount is None or amount <= 0:
@@ -57,8 +74,14 @@ def create_payment(*, amount, payment_type, date, customer=None, supplier=None,
     if not customer and not supplier:
         raise ValidationError('Tolov customer yoki supplierga boglanishi kerak.')
 
+    if direction is None:
+        direction = default_direction(customer=customer, supplier=supplier)
+    if direction not in Payment.Direction.values:
+        raise ValidationError("Tolov yonalishi notogri.")
+
     payment = Payment.objects.create(
         amount=amount,
+        direction=direction,
         payment_type=payment_type,
         date=date,
         customer=customer,

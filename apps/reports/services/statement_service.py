@@ -36,10 +36,14 @@ def _build(opening_balance, debit_events, credit_events, *, date_from=None, date
 
 
 def build_customer_statement(customer, *, date_from=None, date_to=None):
+    from apps.payments.models import active_payments
     from apps.sales.models import Sale
 
     sales = customer.sales.filter(status=Sale.Status.CONFIRMED).prefetch_related('items__product')
-    payments = customer.payments.all()
+    # Bekor qilingan sotuvning summasi yuqorida hisobga olinmadi, shuning uchun
+    # uning to'lovi ham olinmaydi — aks holda saldo `get_total_debt()` bilan
+    # mos kelmay qolardi.
+    payments = active_payments(customer.payments)
 
     debit_events = [
         {
@@ -48,18 +52,25 @@ def build_customer_statement(customer, *, date_from=None, date_to=None):
         }
         for s in sales
     ]
+    # Mijozga qaytarilgan pul uning qarzini oshiradi, shuning uchun debit tomonda.
+    debit_events += [
+        {'date': p.date, 'op': 'Mijozga qaytarim', 'amount': p.amount, 'category': 'Qaytarim'}
+        for p in payments if not p.is_incoming
+    ]
     credit_events = [
         {'date': p.date, 'op': "To'lov (sotuv)", 'amount': p.amount, 'category': "To'lov (sotuv)"}
-        for p in payments
+        for p in payments if p.is_incoming
     ]
     return _build(customer.opening_balance, debit_events, credit_events, date_from=date_from, date_to=date_to)
 
 
 def build_supplier_statement(supplier, *, date_from=None, date_to=None):
+    from apps.payments.models import active_payments
     from apps.purchases.models import Purchase
 
     purchases = supplier.purchases.filter(status=Purchase.Status.CONFIRMED).prefetch_related('items__product')
-    payments = supplier.payments.all()
+    # Bekor qilingan xaridning to'lovi ham hisobga olinmaydi (yuqoridagi izohga qarang).
+    payments = active_payments(supplier.payments)
 
     debit_events = [
         {
@@ -68,9 +79,15 @@ def build_supplier_statement(supplier, *, date_from=None, date_to=None):
         }
         for p in purchases
     ]
+    # Yetkazib beruvchidan qaytarib olingan pul (avansni yechish) unga bo'lgan
+    # qarzimizni oshiradi, shuning uchun debit tomonda.
+    debit_events += [
+        {'date': p.date, 'op': 'Qaytarib olindi', 'amount': p.amount, 'category': 'Qaytarim'}
+        for p in payments if p.is_incoming
+    ]
     credit_events = [
         {'date': p.date, 'op': "To'lov (xarid)", 'amount': p.amount, 'category': "To'lov (xarid)"}
-        for p in payments
+        for p in payments if not p.is_incoming
     ]
     return _build(supplier.opening_balance, debit_events, credit_events, date_from=date_from, date_to=date_to)
 

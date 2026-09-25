@@ -5,6 +5,7 @@ from django.utils.dateparse import parse_date
 
 from apps.common.date_filters import get_date_range
 from apps.common.excel_export import statement_to_response, table_to_response
+from apps.payments.models import active_payments
 from apps.purchases.models import Purchase
 from apps.reports.services import statement_service
 from apps.suppliers.forms import SupplierForm
@@ -100,7 +101,7 @@ def supplier_statement_export(request, pk):
 def supplier_detail(request, pk):
     supplier = get_object_or_404(Supplier, pk=pk)
     purchases = supplier.purchases.exclude(status=Purchase.Status.CANCELLED).prefetch_related('items__product')
-    payments = supplier.payments.all()
+    payments = active_payments(supplier.payments)
 
     total_purchases = supplier.get_total_purchases()
     total_payments = supplier.get_total_payments()
@@ -118,7 +119,14 @@ def supplier_detail(request, pk):
             'purchase_id': purchase.id, 'line_items': list(purchase.items.all()),
         })
     for payment in payments:
-        history.append({'date': payment.date, 'op': "To'lov", 'amount': payment.amount, 'kind': 'payment'})
+        # Unga to'langan pul qarzni kamaytiradi, undan qaytarib olingan pul
+        # (avansni yechish) esa oshiradi.
+        history.append({
+            'date': payment.date,
+            'op': 'Qaytarib olindi' if payment.is_incoming else "To'lov",
+            'amount': payment.amount,
+            'kind': 'refund' if payment.is_incoming else 'payment',
+        })
     history.sort(key=lambda h: h['date'])
 
     return render(request, 'suppliers/detail.html', {

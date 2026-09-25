@@ -17,7 +17,11 @@ class PaymentAdminForm(forms.ModelForm):
         cleaned = super().clean()
         if self.instance.pk:
             return cleaned
-        if cleaned.get('payment_type') == Payment.PaymentType.CASH and cleaned.get('supplier'):
+        # Kassadan naqd chiqadigan har qanday to'lov uchun balans tekshiriladi —
+        # bu yetkazib beruvchiga to'lov ham, mijozga qaytarim ham bo'lishi mumkin.
+        is_cash_out = (cleaned.get('payment_type') == Payment.PaymentType.CASH
+                       and cleaned.get('direction') == Payment.Direction.OUT)
+        if is_cash_out:
             amount = cleaned.get('amount') or 0
             balance = cash_service.get_balance()
             if amount > balance:
@@ -31,8 +35,8 @@ class PaymentAdminForm(forms.ModelForm):
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     form = PaymentAdminForm
-    list_display = ('date', 'amount', 'payment_type', 'customer', 'supplier', 'sale', 'purchase')
-    list_filter = ('payment_type', 'date')
+    list_display = ('date', 'direction', 'amount', 'payment_type', 'customer', 'supplier', 'sale', 'purchase')
+    list_filter = ('direction', 'payment_type', 'date')
     search_fields = (
         'customer__name', 'supplier__name', 'sale__sale_number',
         'purchase__purchase_number', 'notes',

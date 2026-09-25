@@ -7,6 +7,7 @@ from apps.common.date_filters import get_date_range
 from apps.common.excel_export import statement_to_response, table_to_response
 from apps.customers.forms import CustomerForm
 from apps.customers.models import Customer
+from apps.payments.models import active_payments
 from apps.reports.services import statement_service
 from apps.sales.models import Sale
 
@@ -71,7 +72,7 @@ def customer_update(request, pk):
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     sales = customer.sales.exclude(status=Sale.Status.CANCELLED).prefetch_related('items__product')
-    payments = customer.payments.all()
+    payments = active_payments(customer.payments)
 
     total_sales = customer.get_total_sales()
     total_payments = customer.get_total_payments()
@@ -89,7 +90,13 @@ def customer_detail(request, pk):
             'sale_id': sale.id, 'line_items': list(sale.items.all()),
         })
     for payment in payments:
-        history.append({'date': payment.date, 'op': "To'lov", 'amount': payment.amount, 'kind': 'payment'})
+        # Mijozdan olingan pul qarzini kamaytiradi, unga qaytarilgan pul oshiradi.
+        history.append({
+            'date': payment.date,
+            'op': "To'lov" if payment.is_incoming else 'Qaytarim',
+            'amount': payment.amount,
+            'kind': 'payment' if payment.is_incoming else 'refund',
+        })
     history.sort(key=lambda h: h['date'])
 
     return render(request, 'customers/detail.html', {

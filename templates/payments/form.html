@@ -6,12 +6,21 @@
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <div class="row g-3">
+        <div class="col-md-12">
+            <label class="form-label">Yo'nalish</label>
+            {{ form.direction }}{{ form.direction.errors }}
+            <div class="form-text">
+                Mijozdan to'lov olsangiz yoki yetkazib beruvchidan avansni qaytarib
+                olsangiz — <b>Kirim</b>. Yetkazib beruvchiga to'lasangiz yoki mijozga
+                pul qaytarsangiz — <b>Chiqim</b>.
+            </div>
+        </div>
         <div class="col-md-6">
-            <label class="form-label">Mijoz (agar mijozdan bo'lsa)</label>
+            <label class="form-label">Mijoz</label>
             {{ form.customer }}
         </div>
         <div class="col-md-6">
-            <label class="form-label">Yetkazib beruvchi (agar supplierga bo'lsa)</label>
+            <label class="form-label">Yetkazib beruvchi</label>
             {{ form.supplier }}
         </div>
         <div class="col-md-6">

@@ -11,7 +11,7 @@ from apps.customers.models import Customer
 from apps.expenses.models import Expense
 from apps.inventory.services import inventory_service
 from apps.kassa.services import cash_service
-from apps.payments.models import Payment
+from apps.payments.models import Payment, active_payments, net_payment_sum
 from apps.products.models import Product
 from apps.purchases.models import Purchase
 from apps.sales.models import Sale, SaleItem
@@ -38,21 +38,30 @@ def index(request):
     customers_opening = Customer.objects.aggregate(s=Sum('opening_balance'))['s'] or Decimal('0')
     total_sales_all = Sale.objects.filter(status=Sale.Status.CONFIRMED).aggregate(
         s=Sum('total_amount'))['s'] or Decimal('0')
-    total_customer_payments_all = Payment.objects.filter(customer__isnull=False).aggregate(
-        s=Sum('amount'))['s'] or Decimal('0')
+    total_customer_payments_all = net_payment_sum(
+        active_payments(Payment.objects.filter(customer__isnull=False)),
+        positive_direction=Payment.Direction.IN)
     debitor_total = customers_opening + total_sales_all - total_customer_payments_all
 
     suppliers_opening = Supplier.objects.aggregate(s=Sum('opening_balance'))['s'] or Decimal('0')
     total_purchases_all = Purchase.objects.filter(status=Purchase.Status.CONFIRMED).aggregate(
         s=Sum('total_amount'))['s'] or Decimal('0')
-    total_supplier_payments_all = Payment.objects.filter(supplier__isnull=False).aggregate(
-        s=Sum('amount'))['s'] or Decimal('0')
+    total_supplier_payments_all = net_payment_sum(
+        active_payments(Payment.objects.filter(supplier__isnull=False)),
+        positive_direction=Payment.Direction.OUT)
     creditor_total = suppliers_opening + total_purchases_all - total_supplier_payments_all
 
-    customer_payments_today = Payment.objects.filter(
-        date=today, customer__isnull=False).aggregate(s=Sum('amount'))['s'] or Decimal('0')
-    supplier_payments_today = Payment.objects.filter(
-        date=today, supplier__isnull=False).aggregate(s=Sum('amount'))['s'] or Decimal('0')
+    # Bugungi sof pul oqimi: yo'nalish bo'yicha hisoblanadi, tomon bo'yicha emas
+    # (yetkazib beruvchidan qaytarib olingan pul ham kirim hisoblanadi).
+    # Bu yerda `active_payments()` QASDDAN qo'llanilmaydi: bekor qilingan
+    # sotuvning to'lovi qarzdan chiqariladi, lekin pul haqiqatda harakat
+    # qilgan, shuning uchun pul oqimida qoladi.
+    customer_payments_today = net_payment_sum(
+        Payment.objects.filter(date=today, customer__isnull=False),
+        positive_direction=Payment.Direction.IN)
+    supplier_payments_today = net_payment_sum(
+        Payment.objects.filter(date=today, supplier__isnull=False),
+        positive_direction=Payment.Direction.OUT)
     naqd_qoldiq = customer_payments_today - supplier_payments_today - today_expenses
 
     stock_rows = []
