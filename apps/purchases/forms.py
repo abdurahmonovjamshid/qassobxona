@@ -3,6 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.forms import inlineformset_factory
 
+from apps.inventory.forms import WAREHOUSE_WIDGET, setup_warehouse_field
 from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.purchases.models import Purchase, PurchaseExpense, PurchaseItem
@@ -22,8 +23,9 @@ class PurchaseForm(forms.ModelForm):
 
     class Meta:
         model = Purchase
-        fields = ['supplier', 'date', 'notes']
+        fields = ['supplier', 'date', 'warehouse', 'notes']
         widgets = {
+            'warehouse': WAREHOUSE_WIDGET,
             'supplier': forms.Select(attrs={'class': 'form-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
@@ -33,6 +35,7 @@ class PurchaseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['supplier'].queryset = Supplier.objects.filter(active=True)
         self.fields['notes'].required = False
+        setup_warehouse_field(self)
 
 
 class PurchaseItemForm(forms.ModelForm):

@@ -11,4 +11,8 @@ urlpatterns = [
     path('counts/', views.inventory_count_list, name='count_list'),
     path('counts/create/', views.inventory_count_create, name='count_create'),
     path('counts/<int:pk>/', views.inventory_count_detail, name='count_detail'),
+    path('transfers/', views.transfer_list, name='transfer_list'),
+    path('transfers/create/', views.transfer_create, name='transfer_create'),
+    path('transfers/<int:pk>/', views.transfer_detail, name='transfer_detail'),
+    path('transfers/<int:pk>/cancel/', views.transfer_cancel, name='transfer_cancel'),
 ]

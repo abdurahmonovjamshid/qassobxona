@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Yangi ko'chirish{% endblock %}
+{% block content %}
+<h4 class="mb-3">🔁 Omborlar orasida ko'chirish</h4>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="card table-card mb-3">
+        <div class="card-body row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Sana</label>
+                {{ form.date }}{{ form.date.errors }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ form.from_warehouse.label }}</label>
+                {{ form.from_warehouse }}{{ form.from_warehouse.errors }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ form.to_warehouse.label }}</label>
+                {{ form.to_warehouse }}{{ form.to_warehouse.errors }}
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Izoh</label>
+                {{ form.notes }}
+            </div>
+        </div>
+    </div>
+
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+    {% endif %}
+    <div class="card table-card mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span>Ko'chiriladigan mahsulotlar</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-transfer-rows">+ Qo'shish</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th style="width:35%">Mahsulot</th><th>Qoldiq (tanlangan ombor)</th><th>Miqdor (kg)</th><th>Soni (dona)</th><th></th></tr></thead>
+                <tbody id="transfer-rows">
+                {% for item_form in formset %}
+                    <tr class="formset-row">
+                        <td>{{ item_form.id }}{{ item_form.product }}{{ item_form.product.errors }}{{ item_form.non_field_errors }}</td>
+                        <td class="system-stock text-muted small">—</td>
+                        <td>{{ item_form.quantity }}{{ item_form.quantity.errors }}</td>
+                        <td>{{ item_form.pieces }}</td>
+                        <td class="text-center">
+                            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-success btn-lg">KO'CHIRISHNI TASDIQLASH</button>
+    </div>
+</form>
+
+<template id="transfer-empty-form">
+<table><tbody>
+    <tr class="formset-row">
+        <td>{{ formset.empty_form.id }}{{ formset.empty_form.product }}</td>
+        <td class="system-stock text-muted small">—</td>
+        <td>{{ formset.empty_form.quantity }}</td>
+        <td>{{ formset.empty_form.pieces }}</td>
+        <td class="text-center">
+            <button type="button" class="row-remove-btn" title="Qatorni o'chirish">✕</button>
+        </td>
+    </tr>
+</tbody></table>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/formset.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const products = {{ products_json|safe }};
+        const byId = {};
+        products.forEach((p) => { byId[p.id] = p; });
+        const fromSelect = document.querySelector('[data-role="warehouse-select"]');
+
+        // "Qoldiq" ustuni — "Qaysi ombordan" tanlangan omborning qoldig'i.
+        function updateStock(row) {
+            const select = row.querySelector('[data-role="transfer-product"]');
+            const cell = row.querySelector('.system-stock');
+            if (!select || !cell) return;
+            const p = byId[select.value];
+            if (!p || !fromSelect) { cell.textContent = '—'; return; }
+            const kg = parseFloat((p.stock_by_wh || {})[fromSelect.value] || 0);
+            const pcs = (p.pieces_by_wh || {})[fromSelect.value] || 0;
+            cell.textContent = `${kg.toFixed(3)} kg / ${pcs} dona`;
+        }
+
+        function wireRow(row) {
+            const select = row.querySelector('[data-role="transfer-product"]');
+            if (select) {
+                select.addEventListener('change', () => updateStock(row));
+                updateStock(row);
+            }
+        }
+
+        document.querySelectorAll('#transfer-rows .formset-row').forEach(wireRow);
+        if (fromSelect) {
+            fromSelect.addEventListener('change', () => {
+                document.querySelectorAll('#transfer-rows .formset-row').forEach(updateStock);
+            });
+        }
+
+        initFormset({
+            containerId: 'transfer-rows',
+            prefix: '{{ formset.prefix }}',
+            templateId: 'transfer-empty-form',
+            onRowAdded: wireRow,
+        });
+    });
+</script>
+{% endblock %}

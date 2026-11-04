@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Ko'chirish #{{ transfer.pk }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Ko'chirish #{{ transfer.pk }} <span class="badge badge-status-{{ transfer.status }}">{{ transfer.get_status_display }}</span></h4>
+        <div class="text-muted">
+            Sana: <span class="fw-semibold text-dark">{{ transfer.date|date:"d.m.Y" }}</span> ·
+            <span class="fw-semibold text-dark">{{ transfer.from_warehouse.name }}</span> → <span class="fw-semibold text-dark">{{ transfer.to_warehouse.name }}</span>
+        </div>
+        {% if transfer.notes %}<div class="text-muted small">Izoh: {{ transfer.notes }}</div>{% endif %}
+    </div>
+    <div>
+        {% if transfer.status == 'CONFIRMED' %}
+        <form method="post" action="{% url 'inventory:transfer_cancel' transfer.pk %}" class="d-inline" onsubmit="return confirm('Ko\'chirishni bekor qilishni tasdiqlaysizmi?');">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger">Bekor qilish</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'inventory:transfer_list' %}" class="btn btn-outline-secondary">Ortga</a>
+    </div>
+</div>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th></th><th>Mahsulot</th><th class="text-end">Miqdor (kg)</th><th class="text-end">Soni (dona)</th></tr></thead>
+            <tbody>
+            {% for item in items %}
+                <tr>
+                    <td>{% include "partials/product_thumb.html" with product=item.product %}</td>
+                    <td>{{ item.product.name }}</td>
+                    <td class="text-end">{{ item.quantity|uzqty }} kg</td>
+                    <td class="text-end">{{ item.pieces }} dona</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -48,17 +48,17 @@ def build_customer_statement(customer, *, date_from=None, date_to=None):
     debit_events = [
         {
             'date': s.date, 'op': f'Sotuv {s.sale_number}', 'amount': s.total_amount, 'category': 'Sotuv',
-            'sale_id': s.id, 'line_items': list(s.items.all()),
+            'sale_id': s.id, 'line_items': list(s.items.all()), 'notes': '',
         }
         for s in sales
     ]
     # Mijozga qaytarilgan pul uning qarzini oshiradi, shuning uchun debit tomonda.
     debit_events += [
-        {'date': p.date, 'op': 'Mijozga qaytarim', 'amount': p.amount, 'category': 'Qaytarim'}
+        {'date': p.date, 'op': 'Mijozga qaytarim', 'amount': p.amount, 'category': 'Qaytarim', 'notes': p.notes}
         for p in payments if not p.is_incoming
     ]
     credit_events = [
-        {'date': p.date, 'op': "To'lov (sotuv)", 'amount': p.amount, 'category': "To'lov (sotuv)"}
+        {'date': p.date, 'op': "To'lov (sotuv)", 'amount': p.amount, 'category': "To'lov (sotuv)", 'notes': p.notes}
         for p in payments if p.is_incoming
     ]
     return _build(customer.opening_balance, debit_events, credit_events, date_from=date_from, date_to=date_to)
@@ -75,18 +75,18 @@ def build_supplier_statement(supplier, *, date_from=None, date_to=None):
     debit_events = [
         {
             'date': p.date, 'op': f'Xarid {p.purchase_number}', 'amount': p.total_amount, 'category': 'Xarid',
-            'purchase_id': p.id, 'line_items': list(p.items.all()),
+            'purchase_id': p.id, 'line_items': list(p.items.all()), 'notes': p.notes,
         }
         for p in purchases
     ]
     # Yetkazib beruvchidan qaytarib olingan pul (avansni yechish) unga bo'lgan
     # qarzimizni oshiradi, shuning uchun debit tomonda.
     debit_events += [
-        {'date': p.date, 'op': 'Qaytarib olindi', 'amount': p.amount, 'category': 'Qaytarim'}
+        {'date': p.date, 'op': 'Qaytarib olindi', 'amount': p.amount, 'category': 'Qaytarim', 'notes': p.notes}
         for p in payments if p.is_incoming
     ]
     credit_events = [
-        {'date': p.date, 'op': "To'lov (xarid)", 'amount': p.amount, 'category': "To'lov (xarid)"}
+        {'date': p.date, 'op': "To'lov (xarid)", 'amount': p.amount, 'category': "To'lov (xarid)", 'notes': p.notes}
         for p in payments if not p.is_incoming
     ]
     return _build(supplier.opening_balance, debit_events, credit_events, date_from=date_from, date_to=date_to)

@@ -4,6 +4,7 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from apps.customers.models import Customer
+from apps.inventory.forms import WAREHOUSE_WIDGET, setup_warehouse_field
 from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.sales.models import Sale, SaleItem
@@ -22,8 +23,9 @@ class SaleForm(forms.ModelForm):
 
     class Meta:
         model = Sale
-        fields = ['customer', 'date', 'due_date']
+        fields = ['customer', 'date', 'due_date', 'warehouse']
         widgets = {
+            'warehouse': WAREHOUSE_WIDGET,
             'customer': forms.Select(attrs={'class': 'form-select d-none', 'data-role': 'customer-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -34,6 +36,7 @@ class SaleForm(forms.ModelForm):
         self.fields['customer'].queryset = Customer.objects.filter(active=True)
         self.fields['due_date'].required = False
         self.fields['due_date'].label = "To'lov muddati"
+        setup_warehouse_field(self)
 
 
 class SaleItemForm(forms.ModelForm):

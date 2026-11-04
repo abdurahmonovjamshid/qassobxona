@@ -15,6 +15,10 @@
                 <label class="form-label">Sana</label>
                 {{ form.date }}{{ form.date.errors }}
             </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">{{ form.warehouse.label }}</label>
+                {{ form.warehouse }}{{ form.warehouse.errors }}
+            </div>
             <div class="col-md-8">
                 <label class="form-label">Izoh</label>
                 {{ form.notes }}
@@ -96,6 +100,19 @@
         }
 
         document.querySelectorAll('#count-rows .formset-row').forEach(wireRow);
+
+        // Ombor o'zgarsa "Tizimda" ustuni shu omborning qoldig'ini ko'rsatadi.
+        const whSelect = document.querySelector('[data-role="warehouse-select"]');
+        function applyWarehouse() {
+            if (!whSelect) return;
+            products.forEach((p) => {
+                p.stock = (p.stock_by_wh || {})[whSelect.value] || '0';
+                p.stock_pieces = (p.pieces_by_wh || {})[whSelect.value] || 0;
+            });
+            document.querySelectorAll('#count-rows .formset-row').forEach(updateSystemStock);
+        }
+        if (whSelect) whSelect.addEventListener('change', applyWarehouse);
+        applyWarehouse();
 
         initFormset({
             containerId: 'count-rows',

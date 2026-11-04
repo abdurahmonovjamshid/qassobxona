@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Ko'chirishlar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">🔁 Omborlar orasida ko'chirish</h4>
+    <div>
+        <a href="{% url 'inventory:transfer_create' %}" class="btn btn-primary">+ Yangi ko'chirish</a>
+        <a href="{% url 'inventory:list' %}" class="btn btn-outline-secondary">Ombor</a>
+    </div>
+</div>
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>#</th><th>Sana</th><th>Qayerdan</th><th>Qayerga</th><th>Mahsulotlar</th><th>Holat</th><th>Izoh</th><th></th></tr></thead>
+            <tbody>
+            {% for t in transfers %}
+                <tr>
+                    <td>{{ t.pk }}</td>
+                    <td>{{ t.date|date:"d.m.Y" }}</td>
+                    <td>{{ t.from_warehouse.name }}</td>
+                    <td>{{ t.to_warehouse.name }}</td>
+                    <td class="small">
+                        {% for item in t.items.all %}<div>{{ item.product.name }} — {{ item.quantity|uzqty }} kg{% if item.pieces %} ({{ item.pieces }} dona){% endif %}</div>{% endfor %}
+                    </td>
+                    <td><span class="badge badge-status-{{ t.status }}">{{ t.get_status_display }}</span></td>
+                    <td>{{ t.notes|truncatechars:60 }}</td>
+                    <td><a href="{% url 'inventory:transfer_detail' t.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">Ko'chirish yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

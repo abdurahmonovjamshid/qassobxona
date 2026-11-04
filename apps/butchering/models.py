@@ -71,6 +71,10 @@ class Butchering(models.Model):
     difference = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     yield_percentage = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     date = models.DateField()
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse', on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        verbose_name='Ombor', help_text="Bo'sh bo'lsa asosiy ombor",
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
@@ -87,13 +91,14 @@ class Butchering(models.Model):
             raise ValidationError('Output inputdan katta bolmasligi kerak.')
         if self.input_product_id:
             from apps.inventory.services import inventory_service
-            available = inventory_service.get_stock(self.input_product)
+            warehouse = inventory_service.resolve_warehouse(self.warehouse)
+            available = inventory_service.get_stock(self.input_product, warehouse)
             if self.input_weight > available:
                 raise ValidationError(
                     f"Omborda yetarli mahsulot mavjud emas. "
                     f"Mavjud qoldiq: {available} kg ({self.input_product.name})"
                 )
-            available_pieces = inventory_service.get_stock_pieces(self.input_product)
+            available_pieces = inventory_service.get_stock_pieces(self.input_product, warehouse)
             if self.input_pieces and self.input_pieces > available_pieces:
                 raise ValidationError(
                     f"Omborda yetarli dona/bo'lak mavjud emas. "

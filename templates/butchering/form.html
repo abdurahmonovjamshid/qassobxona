@@ -55,6 +55,10 @@
                 <label class="form-label">Sana</label>
                 {{ form.date }}{{ form.date.errors }}
             </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">{{ form.warehouse.label }}</label>
+                {{ form.warehouse }}{{ form.warehouse.errors }}
+            </div>
             <div class="col-md-12">
                 <label class="form-label">Izoh</label>
                 {{ form.notes }}

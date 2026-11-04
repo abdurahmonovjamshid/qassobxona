@@ -7,6 +7,8 @@
     <div>
         <a href="{% url 'inventory:export' %}" class="btn btn-outline-success">Excel eksport</a>
         <a href="{% url 'inventory:import' %}" class="btn btn-outline-success">Excel import</a>
+        <a href="{% url 'inventory:transfer_list' %}" class="btn btn-outline-primary">Ko'chirishlar</a>
+        <a href="{% url 'inventory:transfer_create' %}" class="btn btn-primary">+ Ko'chirish</a>
         <a href="{% url 'inventory:count_list' %}" class="btn btn-outline-primary">Inventarizatsiyalar</a>
     </div>
 </div>
@@ -21,19 +23,20 @@
         <div class="card table-card">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle">
-                    <thead><tr><th></th><th>Mahsulot</th><th>Kategoriya</th><th class="text-end">Qoldiq (kg)</th><th class="text-end">Qoldiq (dona)</th><th class="text-end">O'rtacha tannarx</th></tr></thead>
+                    <thead><tr><th></th><th>Mahsulot</th><th>Kategoriya</th>{% for w in warehouses %}<th class="text-end">{{ w.name }} (kg)</th>{% endfor %}<th class="text-end">Jami qoldiq (kg)</th><th class="text-end">Qoldiq (dona)</th><th class="text-end">O'rtacha tannarx</th></tr></thead>
                     <tbody>
                     {% for row in stock_rows %}
                         <tr class="{% if row.quantity <= 0 %}text-muted{% endif %}">
                             <td>{% include "partials/product_thumb.html" with product=row.product %}</td>
                             <td>{{ row.product.name }}</td>
                             <td>{{ row.product.category.name }}</td>
+                            {% for qty in row.by_warehouse %}<td class="text-end">{{ qty|uzqty }}</td>{% endfor %}
                             <td class="text-end {% if row.quantity <= 0 %}text-danger{% endif %}">{{ row.quantity|uzqty }} kg</td>
                             <td class="text-end">{{ row.pieces }} dona</td>
                             <td class="text-end">{{ row.avg_cost|uzsum }}</td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="6" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
+                        <tr><td colspan="{{ warehouses|length|add:6 }}" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>
@@ -59,18 +62,27 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="col-12 col-md-auto">
+                <select name="warehouse" class="form-select">
+                    <option value="">Barcha omborlar</option>
+                    {% for w in warehouses %}
+                        <option value="{{ w.id }}" {% if request.GET.warehouse == w.id|stringformat:"s" %}selected{% endif %}>{{ w.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
         </form>
         <div class="card table-card">
             <div class="table-responsive">
                 <table class="table mb-0 align-middle">
-                    <thead><tr><th></th><th>Sana</th><th>Mahsulot</th><th>Turi</th><th>Yo'nalish</th><th class="text-end">Miqdor (kg)</th><th class="text-end">Soni (dona)</th><th class="text-end">Tannarx</th><th>Havola</th></tr></thead>
+                    <thead><tr><th></th><th>Sana</th><th>Mahsulot</th><th>Ombor</th><th>Turi</th><th>Yo'nalish</th><th class="text-end">Miqdor (kg)</th><th class="text-end">Soni (dona)</th><th class="text-end">Tannarx</th><th>Havola</th></tr></thead>
                     <tbody>
                     {% for m in movements %}
                         <tr>
                             <td>{% include "partials/product_thumb.html" with product=m.product %}</td>
                             <td>{{ m.date|date:"d.m.Y" }}</td>
                             <td>{{ m.product.name }}</td>
+                            <td>{{ m.warehouse.name }}</td>
                             <td>{{ m.get_movement_type_display }}</td>
                             <td>{% if m.direction == 'IN' %}<span class="text-success">Kirim</span>{% else %}<span class="text-danger">Chiqim</span>{% endif %}</td>
                             <td class="text-end">{{ m.quantity|uzqty }}</td>
@@ -79,7 +91,7 @@
                             <td class="small text-muted">{{ m.reference }}</td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="9" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>

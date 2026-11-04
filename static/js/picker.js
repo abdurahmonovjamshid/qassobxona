@@ -85,3 +85,19 @@ window.attachSearchPicker = function attachSearchPicker({ root, select, items, r
         }
     }
 };
+
+// Tanlangan ombor bo'yicha mahsulotlarning `stock`/`stock_pieces`ini
+// almashtiradi (server `stock_by_wh`/`pieces_by_wh` beradi).
+window.applyWarehouseStock = function (products, onChange) {
+    const select = document.querySelector('[data-role="warehouse-select"]');
+    if (!select) return;
+    const apply = () => {
+        products.forEach((p) => {
+            if (!p.stock_by_wh) return;
+            p.stock = p.stock_by_wh[select.value] || '0';
+            p.stock_pieces = (p.pieces_by_wh || {})[select.value] || 0;
+        });
+    };
+    apply();
+    select.addEventListener('change', () => { apply(); if (onChange) onChange(); });
+};

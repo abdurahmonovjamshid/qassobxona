@@ -7,38 +7,48 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.inventory.forms import InventoryCountForm, InventoryCountItemFormSet, InventoryImportForm
-from apps.inventory.models import InventoryCount, InventoryCountItem, StockMovement
+from apps.inventory.forms import (
+    InventoryCountForm, InventoryCountItemFormSet, InventoryImportForm,
+    StockTransferForm, StockTransferItemFormSet,
+)
+from apps.inventory.models import InventoryCount, InventoryCountItem, StockMovement, StockTransfer, Warehouse
 from apps.inventory.services import excel_service, inventory_service
 from apps.products.models import Product
 
 
 @login_required
 def inventory_list(request):
+    warehouses = list(Warehouse.objects.filter(active=True))
+    kg_maps = [inventory_service.get_all_stock(w) for w in warehouses]
     stock_rows = []
     for product in Product.objects.filter(active=True).select_related('category'):
         qty = inventory_service.get_stock(product)
         stock_rows.append({
             'product': product,
             'quantity': qty,
+            'by_warehouse': [m.get(product.id, 0) for m in kg_maps],
             'pieces': inventory_service.get_stock_pieces(product),
             'avg_cost': inventory_service.get_weighted_average_cost(product),
         })
     stock_rows.sort(key=lambda r: r['product'].name)
 
-    movements = StockMovement.objects.select_related('product').all()
+    movements = StockMovement.objects.select_related('product', 'warehouse').all()
     product_id = request.GET.get('product')
     movement_type = request.GET.get('movement_type')
+    warehouse_id = request.GET.get('warehouse')
     if product_id:
         movements = movements.filter(product_id=product_id)
     if movement_type:
         movements = movements.filter(movement_type=movement_type)
+    if warehouse_id:
+        movements = movements.filter(warehouse_id=warehouse_id)
 
     return render(request, 'inventory/list.html', {
         'stock_rows': stock_rows,
         'movements': movements[:200],
         'products': Product.objects.filter(active=True),
         'movement_types': StockMovement.MovementType.choices,
+        'warehouses': warehouses,
     })
 
 
@@ -74,10 +84,9 @@ def inventory_count_create(request):
         form = InventoryCountForm(initial={'date': timezone.localdate()})
         formset = InventoryCountItemFormSet()
 
-    stock_map = inventory_service.get_all_stock()
-    pieces_map = inventory_service.get_all_stock_pieces()
+    stock_fields = inventory_service.stock_fields_by_warehouse()
     products_json = json.dumps([
-        {'id': p.id, 'name': p.name, 'stock': str(stock_map.get(p.id, 0)), 'stock_pieces': pieces_map.get(p.id, 0)}
+        {'id': p.id, 'name': p.name, **stock_fields(p.id)}
         for p in Product.objects.filter(active=True).order_by('name')
     ])
     return render(request, 'inventory/count_form.html', {
@@ -133,3 +142,65 @@ def inventory_import(request):
     else:
         form = InventoryImportForm()
     return render(request, 'inventory/import.html', {'form': form})
+
+
+@login_required
+def transfer_list(request):
+    transfers = StockTransfer.objects.select_related('from_warehouse', 'to_warehouse').prefetch_related('items')
+    return render(request, 'inventory/transfer_list.html', {'transfers': transfers[:200]})
+
+
+@login_required
+def transfer_create(request):
+    if request.method == 'POST':
+        form = StockTransferForm(request.POST)
+        formset = StockTransferItemFormSet(request.POST)
+        if form.is_valid():
+            transfer = form.save(commit=False)
+            formset = StockTransferItemFormSet(request.POST, instance=transfer)
+            if formset.is_valid():
+                try:
+                    with transaction.atomic():
+                        transfer.status = StockTransfer.Status.DRAFT
+                        transfer.created_by = request.user
+                        transfer.save()
+                        formset.instance = transfer
+                        formset.save()
+                        inventory_service.confirm_transfer(transfer, user=request.user)
+                    messages.success(request, "Ko'chirish muvaffaqiyatli tasdiqlandi.")
+                    return redirect('inventory:transfer_detail', pk=transfer.pk)
+                except ValidationError as exc:
+                    messages.error(request, '; '.join(exc.messages))
+    else:
+        form = StockTransferForm(initial={'date': timezone.localdate()})
+        formset = StockTransferItemFormSet()
+
+    stock_fields = inventory_service.stock_fields_by_warehouse()
+    products_json = json.dumps([
+        {'id': p.id, 'name': p.name, **stock_fields(p.id)}
+        for p in Product.objects.filter(active=True).order_by('name')
+    ])
+    return render(request, 'inventory/transfer_form.html', {
+        'form': form, 'formset': formset, 'products_json': products_json,
+    })
+
+
+@login_required
+def transfer_detail(request, pk):
+    transfer = get_object_or_404(StockTransfer.objects.select_related('from_warehouse', 'to_warehouse'), pk=pk)
+    return render(request, 'inventory/transfer_detail.html', {
+        'transfer': transfer,
+        'items': transfer.items.select_related('product').all(),
+    })
+
+
+@login_required
+def transfer_cancel(request, pk):
+    transfer = get_object_or_404(StockTransfer, pk=pk)
+    if request.method == 'POST':
+        try:
+            inventory_service.cancel_transfer(transfer, user=request.user)
+            messages.success(request, "Ko'chirish bekor qilindi.")
+        except ValidationError as exc:
+            messages.error(request, '; '.join(exc.messages))
+    return redirect('inventory:transfer_detail', pk=transfer.pk)

@@ -329,6 +329,7 @@
             renderCatalog();
         }
 
+        window.applyWarehouseStock(products, renderAll);
         searchInput.addEventListener('input', renderCatalog);
         if (showOutOfStockEl) showOutOfStockEl.addEventListener('change', renderCatalog);
         if (categorySearchInput) categorySearchInput.addEventListener('input', renderCategoryChecklist);

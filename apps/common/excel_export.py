@@ -1,12 +1,34 @@
 """Akt-sverka (statement) natijasini .xlsx faylga aylantirish uchun umumiy
 yordamchi. `apps/reports/services/statement_service.py` qaytargan
 dict'lardan (`opening_balance`, `rows`, `closing_balance`) foydalanadi."""
+from decimal import Decimal
 from io import BytesIO
 
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Font
 from django.http import HttpResponse
 from django.utils import timezone
+
+
+def _item_kg(item) -> Decimal:
+    # Xarid qatorida vazn `net_weight`, sotuv qatorida esa `quantity`.
+    kg = item.net_weight if hasattr(item, 'net_weight') else item.quantity
+    return kg or Decimal('0')
+
+
+def _line_items_summary(line_items):
+    """Hujjat qatorlarini "Mahsulot — 12.5 kg (3 dona)" ko'rinishidagi matnga
+    va jami kg'ga aylantiradi."""
+    parts = []
+    total = Decimal('0')
+    for item in line_items:
+        kg = _item_kg(item)
+        total += kg
+        text = f'{item.product.name} — {kg.normalize():f} kg'
+        if item.pieces:
+            text += f' ({item.pieces} dona)'
+        parts.append(text)
+    return '\n'.join(parts), total
 
 
 def _write_sheet(ws, title, statement):
@@ -16,23 +38,28 @@ def _write_sheet(ws, title, statement):
     ws.append(["Boshlang'ich saldo", float(statement['opening_balance'])])
     ws.append([])
 
-    header = ['Sana', 'Operatsiya', 'Turkum', 'Kirim (+)', 'Chiqim (-)', 'Balans']
+    header = ['Sana', 'Operatsiya', 'Turkum', 'Mahsulotlar', 'Jami kg', 'Kirim (+)', 'Chiqim (-)', 'Balans', 'Izoh']
     ws.append(header)
     for cell in ws[ws.max_row]:
         cell.font = Font(bold=True)
 
     for row in statement['rows']:
+        products, total_kg = _line_items_summary(row.get('line_items') or [])
         ws.append([
             row['date'].strftime('%d.%m.%Y'),
             row['op'],
             row.get('category', ''),
+            products,
+            float(total_kg) if total_kg else None,
             float(row['debit']),
             float(row['credit']),
             float(row['balance']),
+            row.get('notes') or '',
         ])
+        ws.cell(row=ws.max_row, column=4).alignment = Alignment(wrap_text=True, vertical='top')
 
     ws.append([])
-    ws.append(['Yakuniy saldo', '', '', '', '', float(statement['closing_balance'])])
+    ws.append(['Yakuniy saldo', '', '', '', '', '', '', float(statement['closing_balance'])])
     ws[f'A{ws.max_row}'].font = Font(bold=True)
 
     for column_cells in ws.columns:

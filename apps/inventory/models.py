@@ -3,6 +3,27 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
+class Warehouse(models.Model):
+    """Ombor (sklad). Bitta ombor `is_default=True` bo'ladi — ombor
+    ko'rsatilmagan barcha harakatlar (masalan bot orqali) shu omborga yoziladi."""
+    name = models.CharField(max_length=80, unique=True)
+    is_default = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-is_default', 'name']
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_default(cls):
+        warehouse = cls.objects.filter(is_default=True).first() or cls.objects.order_by('id').first()
+        if warehouse is None:
+            warehouse = cls.objects.create(name='Asosiy sklad', is_default=True)
+        return warehouse
+
+
 class StockMovement(models.Model):
     class MovementType(models.TextChoices):
         PURCHASE = 'PURCHASE', 'Purchase'
@@ -12,12 +33,14 @@ class StockMovement(models.Model):
         RETURN = 'RETURN', 'Return'
         WASTE = 'WASTE', 'Waste'
         ADJUSTMENT = 'ADJUSTMENT', 'Adjustment'
+        TRANSFER = 'TRANSFER', "Ko'chirish"
 
     class Direction(models.TextChoices):
         IN = 'IN', 'In'
         OUT = 'OUT', 'Out'
 
     product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='stock_movements')
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='movements')
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
     pieces = models.PositiveIntegerField(default=0, help_text="Dona/bo'lak soni")
     movement_type = models.CharField(max_length=20, choices=MovementType.choices)
@@ -49,6 +72,10 @@ class InventoryCount(models.Model):
         CONFIRMED = 'CONFIRMED', 'Confirmed'
 
     date = models.DateField()
+    warehouse = models.ForeignKey(
+        Warehouse, on_delete=models.PROTECT, null=True, blank=True, related_name='counts',
+        help_text="Bo'sh bo'lsa asosiy omborda o'tkaziladi",
+    )
     notes = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
@@ -89,3 +116,47 @@ class InventoryCountItem(models.Model):
 
     def __str__(self):
         return f'{self.count} - {self.product}'
+
+
+class StockTransfer(models.Model):
+    """Omborlar orasida mahsulot ko'chirish (peremeshenie)."""
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft'
+        CONFIRMED = 'CONFIRMED', 'Confirmed'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+
+    date = models.DateField()
+    from_warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='transfers_out')
+    to_warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='transfers_in')
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-id']
+
+    def clean(self):
+        if self.from_warehouse_id and self.from_warehouse_id == self.to_warehouse_id:
+            raise ValidationError("Qaysi ombordan va qaysi omborga — har xil bo'lishi kerak.")
+
+    def __str__(self):
+        return f"Ko'chirish #{self.pk or 'new'} ({self.date})"
+
+
+class StockTransferItem(models.Model):
+    transfer = models.ForeignKey(StockTransfer, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='transfer_items')
+    quantity = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    pieces = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['id']
+
+    def clean(self):
+        if self.quantity is not None and self.quantity < 0:
+            raise ValidationError('Miqdor manfiy bolmasligi kerak.')
+
+    def __str__(self):
+        return f'{self.transfer} - {self.product}'

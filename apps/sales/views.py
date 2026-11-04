@@ -20,8 +20,7 @@ from apps.sales.services import sale_service
 
 def _products_json():
     products = Product.objects.filter(active=True).select_related('category').order_by('name')
-    stock_map = inventory_service.get_all_stock()
-    pieces_map = inventory_service.get_all_stock_pieces()
+    stock_fields = inventory_service.stock_fields_by_warehouse()
     return json.dumps([
         {
             'id': p.id,
@@ -29,8 +28,7 @@ def _products_json():
             'price': str(p.sale_price),
             'unit': p.unit,
             'image': p.image.url if p.image else None,
-            'stock': str(stock_map.get(p.id, 0)),
-            'stock_pieces': pieces_map.get(p.id, 0),
+            **stock_fields(p.id),
             'category': p.category.code,
             'category_label': p.category.name,
         }

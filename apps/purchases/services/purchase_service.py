@@ -59,6 +59,7 @@ def confirm_purchase(purchase: Purchase, *, user=None) -> Purchase:
             reference=reference,
             date=purchase.date,
             created_by=user,
+            warehouse=purchase.warehouse,
         )
         total += item.total
 

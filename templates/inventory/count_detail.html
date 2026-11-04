@@ -3,7 +3,10 @@
 {% block title %}Inventarizatsiya #{{ count.pk }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Inventarizatsiya #{{ count.pk }} <span class="badge badge-status-{{ count.status }}">{{ count.get_status_display }}</span></h4>
+    <div>
+        <h4 class="mb-0">Inventarizatsiya #{{ count.pk }} <span class="badge badge-status-{{ count.status }}">{{ count.get_status_display }}</span></h4>
+        <div class="text-muted">Sana: {{ count.date|date:"d.m.Y" }} · Ombor: {{ count.warehouse.name|default:"Asosiy sklad" }}</div>
+    </div>
     <a href="{% url 'inventory:count_list' %}" class="btn btn-outline-secondary">Ortga</a>
 </div>
 

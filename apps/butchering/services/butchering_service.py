@@ -55,6 +55,7 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
         reference=reference,
         date=butchering.date,
         created_by=user,
+        warehouse=butchering.warehouse,
     )
 
     # 2) tannarx taqsimoti: input ulushi (og'irlik yoki spetsifikatsiya %) +
@@ -101,6 +102,7 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
             reference=reference,
             date=butchering.date,
             created_by=user,
+            warehouse=butchering.warehouse,
         )
 
     butchering.output_weight = output_total

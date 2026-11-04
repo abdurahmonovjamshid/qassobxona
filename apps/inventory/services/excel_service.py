@@ -28,13 +28,16 @@ def export_inventory_workbook() -> HttpResponse:
     for cell in ws[1]:
         cell.font = cell.font.copy(bold=True)
 
+    # Import natijasi asosiy omborga yoziladi, shuning uchun eksport ham
+    # faqat asosiy ombor qoldig'ini chiqaradi.
+    warehouse = inventory_service.resolve_warehouse(None)
     for product in Product.objects.filter(active=True).select_related('category').order_by('name'):
         ws.append([
             product.id,
             product.code,
             product.name,
-            float(inventory_service.get_stock(product)),
-            inventory_service.get_stock_pieces(product),
+            float(inventory_service.get_stock(product, warehouse)),
+            inventory_service.get_stock_pieces(product, warehouse),
             float(inventory_service.get_weighted_average_cost(product)),
         ])
 

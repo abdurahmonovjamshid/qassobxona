@@ -57,6 +57,7 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
+                        {% if row.notes %}<div class="small fst-italic text-secondary">Izoh: {{ row.notes }}</div>{% endif %}
                     </td>
                     {% if statement.customer_statement %}<td><span class="badge bg-secondary-subtle text-dark">{{ row.category }}</span></td>{% endif %}
                     <td class="text-end">{{ row.debit|uzsum }}</td>

@@ -280,6 +280,7 @@
             onRowRemoved: recalcExpenses,
         });
 
+        window.applyWarehouseStock(products, updateHeader);
         updateHeader();
         renderOutputCards();
         recalcExpenses();

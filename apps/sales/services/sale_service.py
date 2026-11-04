@@ -55,6 +55,7 @@ def confirm_sale(sale: Sale, *, user=None) -> Sale:
             reference=reference,
             date=sale.date,
             created_by=user,
+            warehouse=sale.warehouse,
         )
         total += item.total
 
