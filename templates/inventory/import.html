@@ -9,7 +9,17 @@
 <div class="card table-card mb-3">
     <div class="card-body">
         <ol class="mb-3">
-            <li><a href="{% url 'inventory:export' %}" class="btn btn-outline-primary btn-sm">Excel shablonini yuklab olish</a> — joriy ombor qoldig'i va tannarxi bilan.</li>
+            <li>
+                <form method="get" action="{% url 'inventory:export' %}" class="d-inline-flex gap-2 align-items-center flex-wrap">
+                    <select name="warehouse" class="form-select">
+                    {% for w in warehouses %}
+                        <option value="{{ w.id }}" {% if w.id == warehouse.id %}selected{% endif %}>{{ w.name }}</option>
+                    {% endfor %}
+                </select>
+                    <button class="btn btn-outline-primary btn-sm text-nowrap">Excel shablonini yuklab olish</button>
+                </form>
+                — tanlangan ombor qoldig'i va tannarxi bilan.
+            </li>
             <li>Faylda <strong>Netto qoldiq (kg)</strong>, <strong>Dona</strong> va <strong>Tannarx (so'm/kg)</strong> ustunlarini to'g'irlang. <code>ID</code>, <code>Kod</code>, <code>Nomi</code> ustunlariga tegmang.</li>
             <li>Tannarxni o'zgartirmoqchi bo'lmasangiz, shu qatordagi katakchani bo'sh qoldiring — faqat kg/dona farqi to'g'irlanadi.</li>
             <li>To'g'irlangan faylni pastdan yuklang.</li>
@@ -17,6 +27,10 @@
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label">Qaysi omborga import</label>
+                    {{ form.warehouse }}
+                </div>
                 <div class="col-12 col-md-6">
                     {{ form.file }}
                 </div>

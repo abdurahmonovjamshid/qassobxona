@@ -5,7 +5,7 @@ from django.forms import inlineformset_factory
 
 from apps.customers.models import Customer
 from apps.inventory.forms import WAREHOUSE_WIDGET, setup_warehouse_field
-from apps.payments.models import Payment
+from apps.kassa.forms import cash_register_field, setup_cash_register_field
 from apps.products.models import Product
 from apps.sales.models import Sale, SaleItem
 
@@ -16,10 +16,7 @@ class SaleForm(forms.ModelForm):
         initial=Decimal('0'), label="Boshlang'ich to'lov",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
     )
-    payment_type = forms.ChoiceField(
-        choices=Payment.PaymentType.choices, required=False, initial=Payment.PaymentType.CASH,
-        label="To'lov turi", widget=forms.Select(attrs={'class': 'form-select'}),
-    )
+    cash_register = cash_register_field()
 
     class Meta:
         model = Sale
@@ -37,6 +34,7 @@ class SaleForm(forms.ModelForm):
         self.fields['due_date'].required = False
         self.fields['due_date'].label = "To'lov muddati"
         setup_warehouse_field(self)
+        setup_cash_register_field(self)
 
 
 class SaleItemForm(forms.ModelForm):

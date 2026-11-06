@@ -2,7 +2,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.kassa.models import CashTransaction
+from apps.kassa.models import CashRegister, CashTransaction
 from apps.kassa.services import cash_service
 from apps.payments.models import Payment
 
@@ -22,23 +22,35 @@ def _cash_transaction_type(payment: Payment) -> str:
             else CashTransaction.TransactionType.PURCHASE_PAYMENT)
 
 
+def _register(payment: Payment):
+    """To'lov yozilgan kassa. Eski to'lovlarda `cash_register` bo'sh bo'lishi
+    mumkin — ular uchun naqd to'lov Naqd kassada deb hisoblanadi."""
+    if payment.cash_register_id:
+        return payment.cash_register
+    if payment.payment_type == Payment.PaymentType.CASH:
+        return CashRegister.get_default()
+    return None
+
+
 def apply_cash_effect(payment: Payment, *, user=None) -> None:
-    if payment.payment_type != Payment.PaymentType.CASH:
+    register = _register(payment)
+    if register is None:
         return
     if payment.is_incoming:
         cash_service.record_cash_in(
             amount=payment.amount, transaction_type=_cash_transaction_type(payment),
-            date=payment.date, reference=_reference(payment), created_by=user,
+            date=payment.date, reference=_reference(payment), created_by=user, register=register,
         )
     else:
         cash_service.record_cash_out(
             amount=payment.amount, transaction_type=_cash_transaction_type(payment),
-            date=payment.date, reference=_reference(payment), created_by=user,
+            date=payment.date, reference=_reference(payment), created_by=user, register=register,
         )
 
 
 def _reverse_cash_effect(payment: Payment, *, user=None) -> None:
-    if payment.payment_type != Payment.PaymentType.CASH:
+    register = _register(payment)
+    if register is None:
         return
     if payment.is_incoming:
         # Kassaga kirim bo'lgan to'lov o'chirilyapti — endi teskarisi (chiqim)
@@ -47,12 +59,13 @@ def _reverse_cash_effect(payment: Payment, *, user=None) -> None:
         cash_service.record_cash_out(
             amount=payment.amount, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
             date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user,
-            enforce_balance=False,
+            enforce_balance=False, register=register,
         )
     else:
         cash_service.record_cash_in(
             amount=payment.amount, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
             date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user,
+            register=register,
         )
 
 
@@ -63,10 +76,22 @@ def default_direction(*, customer=None, supplier=None) -> str:
 
 
 @transaction.atomic
-def create_payment(*, amount, payment_type, date, customer=None, supplier=None,
+def create_payment(*, amount, date, payment_type=None, cash_register=None, customer=None, supplier=None,
                     sale=None, purchase=None, notes='', user=None, direction=None) -> Payment:
     """To'lov yaratadi, tegishli Sale/Purchase qarzini qayta hisoblaydi va
-    (naqd bo'lsa) kassa balansini yangilaydi."""
+    tanlangan kassa balansini yangilaydi.
+
+    `cash_register` berilsa to'lov turi shu kassadan olinadi (Naqd kassa ->
+    CASH, Karta kassa -> CARD). Faqat `payment_type` berilsa kassa undan
+    topiladi (CASH/CARD); o'tkazma va boshqa turlar kassaga yozilmaydi.
+    Ikkalasi ham berilmasa — Naqd kassa."""
+    if cash_register is not None:
+        payment_type = cash_register.code
+    elif payment_type:
+        cash_register = CashRegister.for_payment_type(payment_type)
+    else:
+        cash_register = CashRegister.get_default()
+        payment_type = cash_register.code
     if amount is None or amount <= 0:
         raise ValidationError('Tolov summasi musbat bolishi kerak.')
     if customer and supplier:
@@ -83,6 +108,7 @@ def create_payment(*, amount, payment_type, date, customer=None, supplier=None,
         amount=amount,
         direction=direction,
         payment_type=payment_type,
+        cash_register=cash_register,
         date=date,
         customer=customer,
         supplier=supplier,

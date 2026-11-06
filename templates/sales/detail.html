@@ -3,7 +3,10 @@
 {% block title %}Sotuv {{ sale.sale_number }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
     <h4 class="mb-0">Sotuv {{ sale.sale_number }} <span class="badge badge-status-{{ sale.status }}">{{ sale.get_status_display }}</span></h4>
+        <div class="text-muted">Sana: <span class="fw-semibold text-dark">{{ sale.date|date:"d.m.Y" }}</span> · Ombor: <span class="fw-semibold text-dark">{{ sale.warehouse.name|default:"Asosiy sklad" }}</span></div>
+    </div>
     <div>
         {% if sale.status == 'CONFIRMED' %}
         <a href="{% url 'payments:create' %}?sale={{ sale.pk }}" class="btn btn-outline-primary">+ To'lov</a>

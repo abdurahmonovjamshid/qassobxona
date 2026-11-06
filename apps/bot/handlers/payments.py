@@ -24,7 +24,7 @@ from apps.payments.services import payment_service
 
 register_pagination('pay_cust', choices.active_customers)
 register_pagination('pay_sup', choices.active_suppliers)
-register_pagination('pay_ptype', lambda: choices.PAYMENT_TYPES)
+register_pagination('pay_ptype', choices.cash_registers)
 
 
 @register_menu(keyboards.MENU_PAYMENTS)
@@ -91,7 +91,7 @@ def on_amount(message, tg_user):
         bot.send_message(message.chat.id, "Summa musbat bolishi kerak. Qayta kiriting:")
         return
     set_state(tg_user, 'pay.picking_type', amount=str(amount))
-    send_picker(message.chat.id, 'pay_ptype', choices.PAYMENT_TYPES, "To'lov turi:")
+    send_picker(message.chat.id, 'pay_ptype', choices.cash_registers(), "Qaysi kassa?")
 
 
 @register_callback('pay_ptype')
@@ -125,7 +125,7 @@ def _send_confirm(chat_id, tg_user):
         f'{party_label}: {data["party_name"]}',
         f"Yo'nalish: {'⬅️ Pul bizga keldi' if incoming else '➡️ Pul bizdan ketdi'}",
         f"Summa: {som(data['amount'])}",
-        f"To'lov turi: {dict(choices.PAYMENT_TYPES).get(data['payment_type'], data['payment_type'])}",
+        f"Kassa: {dict(choices.cash_registers()).get(data['payment_type'], data['payment_type'])}",
         f"Sana: {date_fmt(data['date'])}",
     ]
     if data.get('notes'):

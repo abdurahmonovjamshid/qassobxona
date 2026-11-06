@@ -24,10 +24,6 @@ class PurchaseCreateViewTests(TestCase):
             'date': str(timezone.localdate()),
             'notes': '',
             'paid_amount': '100000',
-            # TRANSFER emas CASH — bu test xaridni tasdiqlash oqimini tekshiradi,
-            # kassa naqd balansiga bog'liq bo'lishi shart emas (bu alohida
-            # apps.kassa.tests da tekshiriladi).
-            'payment_type': 'TRANSFER',
             'items-TOTAL_FORMS': '1',
             'items-INITIAL_FORMS': '0',
             'items-MIN_NUM_FORMS': '1',
@@ -44,7 +40,15 @@ class PurchaseCreateViewTests(TestCase):
         data.update(overrides)
         return data
 
+    def _fund(self, code='CASH', amount='5000000'):
+        from apps.kassa.models import CashRegister
+        from apps.kassa.services import cash_service
+        register = CashRegister.for_payment_type(code)
+        cash_service.record_manual_balance(amount=Decimal(amount), date=timezone.localdate(), register=register)
+        return register
+
     def test_create_purchase_confirms_immediately(self):
+        self._fund()
         response = self.client.post(reverse('purchases:create'), self._post_data())
         self.assertEqual(response.status_code, 302, getattr(response, 'context', None) and response.context['form'].errors)
         purchase = Purchase.objects.get()
@@ -57,12 +61,25 @@ class PurchaseCreateViewTests(TestCase):
         # yaratilsa — butun xarid (mahsulotlari bilan) saqlanmasligi kerak,
         # foydalanuvchiga esa aniq sabab ko'rsatilishi kerak.
         response = self.client.post(
-            reverse('purchases:create'), self._post_data(payment_type='CASH'),
+            reverse('purchases:create'), self._post_data(),
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Purchase.objects.exists())
         messages = list(response.context['messages'])
-        self.assertTrue(any("Kassada yetarli mablag'" in str(m) for m in messages))
+        self.assertTrue(any("Naqd kassada yetarli mablag'" in str(m) for m in messages))
+
+    def test_card_payment_goes_to_card_kassa(self):
+        from apps.kassa.services import cash_service
+        card = self._fund('CARD', '1000000')
+        response = self.client.post(
+            reverse('purchases:create'), self._post_data(cash_register=str(card.pk)),
+        )
+        self.assertEqual(response.status_code, 302)
+        payment = Purchase.objects.get().payments.get()
+        self.assertEqual(payment.cash_register, card)
+        self.assertEqual(payment.payment_type, 'CARD')
+        self.assertEqual(cash_service.get_balance(card), Decimal('900000'))
+        self.assertEqual(cash_service.get_balance(), Decimal('0'))
 
     def test_cash_payment_succeeds_after_kassa_opening_balance(self):
         from apps.kassa.services import cash_service
@@ -70,7 +87,7 @@ class PurchaseCreateViewTests(TestCase):
         cash_service.record_manual_balance(amount=Decimal('5000000'), date=timezone.localdate())
 
         response = self.client.post(
-            reverse('purchases:create'), self._post_data(payment_type='CASH'),
+            reverse('purchases:create'), self._post_data(),
         )
         self.assertEqual(response.status_code, 302)
         purchase = Purchase.objects.get()

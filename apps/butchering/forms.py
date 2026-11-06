@@ -8,15 +8,17 @@ from apps.butchering.models import (
     ButcheringSpecification, ButcheringSpecificationItem,
 )
 from apps.inventory.forms import WAREHOUSE_WIDGET, setup_warehouse_field
+from apps.kassa.forms import setup_cash_register_field
 from apps.products.models import Product
 
 
 class ButcheringForm(forms.ModelForm):
     class Meta:
         model = Butchering
-        fields = ['input_product', 'specification', 'input_weight', 'input_pieces', 'date', 'warehouse', 'notes']
+        fields = ['input_product', 'specification', 'input_weight', 'input_pieces', 'date', 'warehouse', 'cash_register', 'notes']
         widgets = {
             'warehouse': WAREHOUSE_WIDGET,
+            'cash_register': forms.Select(attrs={'class': 'form-select'}),
             'input_product': forms.Select(attrs={'class': 'form-select d-none', 'data-role': 'input-product-select'}),
             'specification': forms.Select(attrs={'class': 'form-select', 'data-role': 'specification-select'}),
             'input_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0', 'data-role': 'input-weight'}),
@@ -38,6 +40,10 @@ class ButcheringForm(forms.ModelForm):
         self.fields['input_pieces'].initial = None
         self.fields['notes'].required = False
         setup_warehouse_field(self)
+        self.fields['cash_register'].required = False
+        self.fields['cash_register'].empty_label = None
+        self.fields['cash_register'].label = 'Xarajatlar qaysi kassadan'
+        setup_cash_register_field(self)
 
     def clean_input_pieces(self):
         return self.cleaned_data.get('input_pieces') or 0

@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="mb-0">Xarid {{ purchase.purchase_number }} <span class="badge badge-status-{{ purchase.status }}">{{ purchase.get_status_display }}</span></h4>
-        <div class="text-muted">Sana: <span class="fw-semibold text-dark">{{ purchase.date|date:"d.m.Y" }}</span>{% if purchase.warehouse %} · Sklad: <span class="fw-semibold text-dark">{{ purchase.warehouse.name }}</span>{% endif %}</div>
+        <div class="text-muted">Sana: <span class="fw-semibold text-dark">{{ purchase.date|date:"d.m.Y" }}</span> · Ombor: <span class="fw-semibold text-dark">{{ purchase.warehouse.name|default:"Asosiy sklad" }}</span></div>
         {% if purchase.notes %}<div class="text-muted small">Izoh: {{ purchase.notes }}</div>{% endif %}
     </div>
     <div>

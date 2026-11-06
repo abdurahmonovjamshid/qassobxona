@@ -4,7 +4,7 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from apps.inventory.forms import WAREHOUSE_WIDGET, setup_warehouse_field
-from apps.payments.models import Payment
+from apps.kassa.forms import cash_register_field, setup_cash_register_field
 from apps.products.models import Product
 from apps.purchases.models import Purchase, PurchaseExpense, PurchaseItem
 from apps.suppliers.models import Supplier
@@ -16,10 +16,7 @@ class PurchaseForm(forms.ModelForm):
         initial=Decimal('0'), label="Boshlang'ich to'lov",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
     )
-    payment_type = forms.ChoiceField(
-        choices=Payment.PaymentType.choices, required=False, initial=Payment.PaymentType.CASH,
-        label="To'lov turi", widget=forms.Select(attrs={'class': 'form-select'}),
-    )
+    cash_register = cash_register_field()
 
     class Meta:
         model = Purchase
@@ -36,6 +33,7 @@ class PurchaseForm(forms.ModelForm):
         self.fields['supplier'].queryset = Supplier.objects.filter(active=True)
         self.fields['notes'].required = False
         setup_warehouse_field(self)
+        setup_cash_register_field(self)
 
 
 class PurchaseItemForm(forms.ModelForm):

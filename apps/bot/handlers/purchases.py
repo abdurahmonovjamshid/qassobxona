@@ -24,6 +24,7 @@ from apps.bot.inputs import is_skip, parse_decimal, parse_int
 from apps.bot.links import supplier_link
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
+from apps.bot.warehouses import ask_warehouse, register_warehouse_picker, selected_warehouse
 from apps.payments.services import payment_service
 from apps.purchases.models import Purchase, PurchaseExpense, PurchaseItem
 from apps.purchases.services import purchase_service
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 register_pagination('p_sup', choices.active_suppliers)
 register_pagination('p_iprod', choices.active_products)
 register_pagination('p_etype', lambda: choices.PURCHASE_EXPENSE_TYPES)
-register_pagination('p_pay_type', lambda: choices.PAYMENT_TYPES)
+register_pagination('p_pay_type', choices.cash_registers)
 
 
 @register_menu(keyboards.MENU_PURCHASES)
@@ -65,8 +66,16 @@ def pick_supplier(call, tg_user):
     from apps.suppliers.models import Supplier
     supplier = Supplier.objects.get(pk=supplier_id)
     bot.answer_callback_query(call.id, supplier.name)
-    set_state(tg_user, 'purchase.date', supplier_id=supplier_id, supplier_name=supplier.name)
-    send_calendar(call.message.chat.id, 'p_date', 'Xarid sanasi?')
+    set_state(tg_user, 'purchase.picking_warehouse', supplier_id=supplier_id, supplier_name=supplier.name)
+    ask_warehouse(call.message.chat.id, tg_user, 'p_wh', 'Qaysi omborga kirim qilinadi?')
+
+
+def _after_warehouse(chat_id, tg_user):
+    set_state(tg_user, 'purchase.date')
+    send_calendar(chat_id, 'p_date', 'Xarid sanasi?')
+
+
+register_warehouse_picker('p_wh', _after_warehouse)
 
 
 def _on_date_picked(call, tg_user, picked):
@@ -255,10 +264,10 @@ def on_payment_amount(message, tg_user):
         _send_confirm(message.chat.id, tg_user)
         return
     set_state(tg_user, 'purchase.picking_payment_type', paid_amount=str(amount))
-    send_picker(message.chat.id, 'p_etype2', choices.PAYMENT_TYPES, "To'lov turi:")
+    send_picker(message.chat.id, 'p_etype2', choices.cash_registers(), "Qaysi kassa?")
 
 
-register_pagination('p_etype2', lambda: choices.PAYMENT_TYPES)
+register_pagination('p_etype2', choices.cash_registers)
 
 
 @register_callback('p_etype2')
@@ -273,6 +282,7 @@ def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     lines = [
         f"Yetkazib beruvchi: {data['supplier_name']}",
+        f"Ombor: {selected_warehouse(tg_user).name}",
         f"Sana: {date_fmt(data['date'])}",
         '',
         _cart_text(data.get('items', [])),
@@ -301,6 +311,7 @@ def confirm_purchase(call, tg_user):
                 supplier=Supplier.objects.get(pk=data['supplier_id']),
                 purchase_number=purchase_service.generate_purchase_number(),
                 date=data['date'],
+                warehouse=selected_warehouse(tg_user),
                 status=Purchase.Status.DRAFT,
                 created_by=user,
             )
@@ -415,7 +426,7 @@ def on_pay_existing_amount(message, tg_user):
         bot.send_message(message.chat.id, "Summa musbat bo'lishi kerak. Qayta kiriting:")
         return
     set_state(tg_user, 'purchase.pay_existing_type', pay_amount=str(amount))
-    send_picker(message.chat.id, 'p_pay_type', choices.PAYMENT_TYPES, "To'lov turi:")
+    send_picker(message.chat.id, 'p_pay_type', choices.cash_registers(), "Qaysi kassa?")
 
 
 @register_callback('p_pay_type')

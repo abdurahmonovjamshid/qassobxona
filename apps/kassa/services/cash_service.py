@@ -8,32 +8,48 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-from apps.kassa.models import CashTransaction
+from apps.kassa.models import CashRegister, CashTransaction
 
 
-def get_balance() -> Decimal:
-    return CashTransaction.objects.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+def resolve_register(register) -> CashRegister:
+    """`None` berilsa asosiy (Naqd) kassa."""
+    return register or CashRegister.get_default()
 
 
-def _create(*, amount, transaction_type, date, reference='', notes='', created_by=None) -> CashTransaction:
+def get_balance(register=None) -> Decimal:
+    """Kassa balansi. `register` berilmasa — asosiy (Naqd) kassa."""
+    register = resolve_register(register)
+    return CashTransaction.objects.filter(register=register).aggregate(s=Sum('amount'))['s'] or Decimal('0')
+
+
+def get_balances() -> list:
+    """Har bir kassa balansi: [{'register', 'balance'}, ...] (Naqd birinchi)."""
+    CashRegister.get_default()
+    return [{'register': r, 'balance': get_balance(r)} for r in CashRegister.objects.all()]
+
+
+def _create(*, amount, transaction_type, date, reference='', notes='', created_by=None,
+            register=None) -> CashTransaction:
     return CashTransaction.objects.create(
+        register=resolve_register(register),
         amount=amount, transaction_type=transaction_type, date=date,
         reference=reference, notes=notes, created_by=created_by,
     )
 
 
-def record_cash_in(*, amount, transaction_type, date, reference='', notes='', created_by=None) -> CashTransaction:
+def record_cash_in(*, amount, transaction_type, date, reference='', notes='', created_by=None,
+                   register=None) -> CashTransaction:
     if amount is None or amount <= 0:
         raise ValidationError('Kassa kirim summasi musbat bolishi kerak.')
     return _create(
         amount=amount, transaction_type=transaction_type, date=date,
-        reference=reference, notes=notes, created_by=created_by,
+        reference=reference, notes=notes, created_by=created_by, register=register,
     )
 
 
-def record_manual_balance(*, amount, date, notes='', created_by=None) -> CashTransaction:
-    """Superuser tomonidan kassa balansiga qo'lda naqd pul kiritish (masalan
-    dasturdan foydalanishni boshlaganda mavjud naqd qoldiqni belgilash uchun).
+def record_manual_balance(*, amount, date, notes='', created_by=None, register=None) -> CashTransaction:
+    """Superuser tomonidan kassa balansiga qo'lda pul kiritish (masalan
+    dasturdan foydalanishni boshlaganda mavjud qoldiqni belgilash uchun).
     `amount` musbat bo'lsa kirim, manfiy bo'lsa chiqim sifatida yoziladi.
     Bu yagona joy — bundan tashqari kassa faqat Sale/Purchase to'lovlari va
     xarajatlar orqali avtomatik yoziladi."""
@@ -41,22 +57,23 @@ def record_manual_balance(*, amount, date, notes='', created_by=None) -> CashTra
         raise ValidationError('Summa nolga teng bolmasligi kerak.')
     return _create(
         amount=amount, transaction_type=CashTransaction.TransactionType.OPENING,
-        date=date, notes=notes, created_by=created_by,
+        date=date, notes=notes, created_by=created_by, register=register,
     )
 
 
 def record_cash_out(*, amount, transaction_type, date, reference='', notes='', created_by=None,
-                     enforce_balance=True) -> CashTransaction:
+                    enforce_balance=True, register=None) -> CashTransaction:
     if amount is None or amount <= 0:
         raise ValidationError('Kassa chiqim summasi musbat bolishi kerak.')
+    register = resolve_register(register)
     if enforce_balance:
-        balance = get_balance()
+        balance = get_balance(register)
         if amount > balance:
             raise ValidationError(
-                f"Kassada yetarli mablag' yo'q. Joriy balans: {balance} so'm, "
+                f"{register.name}da yetarli mablag' yo'q. Joriy balans: {balance} so'm, "
                 f"talab qilingan: {amount} so'm."
             )
     return _create(
         amount=-amount, transaction_type=transaction_type, date=date,
-        reference=reference, notes=notes, created_by=created_by,
+        reference=reference, notes=notes, created_by=created_by, register=register,
     )

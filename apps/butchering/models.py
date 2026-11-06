@@ -75,6 +75,10 @@ class Butchering(models.Model):
         'inventory.Warehouse', on_delete=models.PROTECT, null=True, blank=True, related_name='+',
         verbose_name='Ombor', help_text="Bo'sh bo'lsa asosiy ombor",
     )
+    cash_register = models.ForeignKey(
+        'kassa.CashRegister', on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        verbose_name='Kassa', help_text="Bo'laklash xarajatlari qaysi kassadan to'lanadi (bo'sh — Naqd)",
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)

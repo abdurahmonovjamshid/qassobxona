@@ -12,7 +12,7 @@ from apps.payments.services import payment_service
 
 @login_required
 def payment_list(request):
-    payments = Payment.objects.select_related('customer', 'supplier', 'sale', 'purchase').all()
+    payments = Payment.objects.select_related('customer', 'supplier', 'sale', 'purchase', 'cash_register').all()
     payment_type = request.GET.get('payment_type')
     direction = request.GET.get('direction')
     date_from, date_to = get_date_range(request)
@@ -42,7 +42,7 @@ def payment_create(request):
             data = form.cleaned_data
             try:
                 payment_service.create_payment(
-                    amount=data['amount'], payment_type=data['payment_type'], date=data['date'],
+                    amount=data['amount'], cash_register=data.get('cash_register'), date=data['date'],
                     direction=data['direction'],
                     customer=data.get('customer'), supplier=data.get('supplier'),
                     sale=data.get('sale'), purchase=data.get('purchase'),

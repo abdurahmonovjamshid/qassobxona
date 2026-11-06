@@ -12,10 +12,10 @@ from apps.kassa.services import cash_service
 
 @register_menu(keyboards.MENU_KASSA)
 def kassa_menu(message, tg_user):
-    balance = cash_service.get_balance()
-    moves = CashTransaction.objects.all()[:10]
-    lines = [f'💵 Kassa balansi: {som(balance)}', '', "So'nggi harakatlar:"]
-    for m in moves:
+    lines = ['Kassa balanslari:']
+    lines += [f"{b['register'].name}: {som(b['balance'])}" for b in cash_service.get_balances()]
+    lines += ['', "So'nggi harakatlar:"]
+    for m in CashTransaction.objects.select_related('register')[:10]:
         sign = '+' if m.amount >= 0 else ''
-        lines.append(f'{date_fmt(m.date)} {m.get_transaction_type_display()}: {sign}{som(m.amount)}')
+        lines.append(f'{date_fmt(m.date)} [{m.register.name}] {m.get_transaction_type_display()}: {sign}{som(m.amount)}')
     bot.send_message(message.chat.id, '\n'.join(lines))

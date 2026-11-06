@@ -45,8 +45,8 @@
                 {{ form.paid_amount }}
             </div>
             <div class="col-6 col-md-1">
-                <label class="form-label">{{ form.payment_type.label }}</label>
-                {{ form.payment_type }}
+                <label class="form-label">{{ form.cash_register.label }}</label>
+                {{ form.cash_register }}
             </div>
         </div>
     </div>
@@ -117,8 +117,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/picker.js' %}"></script>
-<script src="{% static 'js/sale_form.js' %}"></script>
+<script src="{% static 'js/picker.js' %}?v=2"></script>
+<script src="{% static 'js/sale_form.js' %}?v=2"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         window.SaleFormInit({

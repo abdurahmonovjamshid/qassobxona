@@ -1,12 +1,10 @@
 """Xarajat (Expense) oqimi: kategoriya -> summa -> to'lov turi -> sana ->
 izoh -> tasdiqlash. `apps/expenses/views.py::expense_create` bilan bir xil:
-Expense saqlanadi va agar `payment_type == CASH` bo'lsa
-`cash_service.record_cash_out()` bitta `transaction.atomic()` blokida
-chaqiriladi (kassada mablag' yetarli bo'lmasa xatolik chiqadi)."""
+`expense_services.create_expense()` orqali Expense saqlanadi va tanlangan
+kassadan chiqim qilinadi (kassada mablag' yetarli bo'lmasa xatolik chiqadi)."""
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
 
 from apps.bot import choices, keyboards
 from apps.bot.bot_instance import bot
@@ -15,22 +13,23 @@ from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
-from apps.expenses.models import Expense
-from apps.kassa.models import CashTransaction
+from apps.expenses import services as expense_services
+from apps.expenses.models import Expense, ExpenseCategory
+from apps.kassa.models import CashRegister
 from apps.kassa.services import cash_service
 
 register_pagination('exp_cat', choices.active_expense_categories)
-register_pagination('exp_ptype', lambda: choices.PAYMENT_TYPES)
+register_pagination('exp_ptype', choices.cash_registers)
 
 
 @register_menu(keyboards.MENU_EXPENSES)
 def expenses_menu(message, tg_user):
-    balance = cash_service.get_balance()
+    balances = '\n'.join(f"{b['register'].name}: {som(b['balance'])}" for b in cash_service.get_balances())
     from telebot import types
     kb = types.InlineKeyboardMarkup()
     kb.row(types.InlineKeyboardButton('➕ Yangi xarajat', callback_data='exnew:1'))
     kb.row(types.InlineKeyboardButton("📋 So'nggi xarajatlar", callback_data='exlist:0'))
-    bot.send_message(message.chat.id, f'Xarajatlar bo\'limi.\nKassa balansi: {som(balance)}', reply_markup=kb)
+    bot.send_message(message.chat.id, f'Xarajatlar bo\'limi.\n{balances}', reply_markup=kb)
 
 
 @register_callback('exnew')
@@ -57,7 +56,7 @@ def on_amount(message, tg_user):
         bot.send_message(message.chat.id, 'Xarajat musbat bolishi kerak. Qayta kiriting:')
         return
     set_state(tg_user, 'expense.picking_type', amount=str(amount))
-    send_picker(message.chat.id, 'exp_ptype', choices.PAYMENT_TYPES, "To'lov turi:")
+    send_picker(message.chat.id, 'exp_ptype', choices.cash_registers(), "Qaysi kassa?")
 
 
 @register_callback('exp_ptype')
@@ -84,7 +83,7 @@ def on_description(message, tg_user):
     lines = [
         f"Kategoriya: {data['category_name']}",
         f"Summa: {som(data['amount'])}",
-        f"To'lov turi: {dict(choices.PAYMENT_TYPES).get(data['payment_type'], data['payment_type'])}",
+        f"Kassa: {dict(choices.cash_registers()).get(data['payment_type'], data['payment_type'])}",
         f"Sana: {date_fmt(data['date'])}",
     ]
     if description:
@@ -100,17 +99,11 @@ def confirm_expense(call, tg_user):
     data = tg_user.data
     user = tg_user.django_user
     try:
-        with transaction.atomic():
-            expense = Expense.objects.create(
-                category_id=data['category_id'], amount=Decimal(data['amount']),
-                date=data['date'], description=data.get('description', ''),
-                payment_type=data['payment_type'], created_by=user,
-            )
-            if expense.payment_type == Expense.PaymentType.CASH:
-                cash_service.record_cash_out(
-                    amount=expense.amount, transaction_type=CashTransaction.TransactionType.EXPENSE,
-                    date=expense.date, reference=f'EXPENSE:{expense.pk}', created_by=user,
-                )
+        expense = expense_services.create_expense(
+            category=ExpenseCategory.objects.get(pk=data['category_id']), amount=Decimal(data['amount']),
+            date=data['date'], description=data.get('description', ''),
+            cash_register=CashRegister.for_payment_type(data.get('payment_type')), user=user,
+        )
         tg_user.reset_state()
         bot.send_message(
             call.message.chat.id, f"✅ Xarajat qo'shildi: {som(expense.amount)}",

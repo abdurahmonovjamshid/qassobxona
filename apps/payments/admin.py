@@ -19,14 +19,19 @@ class PaymentAdminForm(forms.ModelForm):
             return cleaned
         # Kassadan naqd chiqadigan har qanday to'lov uchun balans tekshiriladi —
         # bu yetkazib beruvchiga to'lov ham, mijozga qaytarim ham bo'lishi mumkin.
-        is_cash_out = (cleaned.get('payment_type') == Payment.PaymentType.CASH
-                       and cleaned.get('direction') == Payment.Direction.OUT)
-        if is_cash_out:
+        from apps.kassa.models import CashRegister
+        register = cleaned.get('cash_register') or CashRegister.for_payment_type(cleaned.get('payment_type'))
+        if register is not None:
+            cleaned['cash_register'] = register
+            self.instance.cash_register = register
+            cleaned['payment_type'] = register.code
+            self.instance.payment_type = register.code
+        if register is not None and cleaned.get('direction') == Payment.Direction.OUT:
             amount = cleaned.get('amount') or 0
-            balance = cash_service.get_balance()
+            balance = cash_service.get_balance(register)
             if amount > balance:
                 raise forms.ValidationError(
-                    f"Kassada yetarli mablag' yo'q. Joriy balans: {balance} so'm, "
+                    f"{register.name}da yetarli mablag' yo'q. Joriy balans: {balance} so'm, "
                     f"talab qilingan: {amount} so'm."
                 )
         return cleaned
@@ -35,8 +40,8 @@ class PaymentAdminForm(forms.ModelForm):
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     form = PaymentAdminForm
-    list_display = ('date', 'direction', 'amount', 'payment_type', 'customer', 'supplier', 'sale', 'purchase')
-    list_filter = ('direction', 'payment_type', 'date')
+    list_display = ('date', 'direction', 'amount', 'cash_register', 'payment_type', 'customer', 'supplier', 'sale', 'purchase')
+    list_filter = ('direction', 'cash_register', 'payment_type', 'date')
     search_fields = (
         'customer__name', 'supplier__name', 'sale__sale_number',
         'purchase__purchase_number', 'notes',

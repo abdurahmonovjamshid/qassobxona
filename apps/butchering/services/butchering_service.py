@@ -79,12 +79,13 @@ def confirm_butchering(butchering: Butchering, *, user=None) -> Butchering:
     total_expenses = butchering.extra_expenses.aggregate(s=Sum('amount'))['s'] or Decimal('0')
     expense_allocations = allocate_proportionally(total_expenses, outputs, lambda o: o.pieces)
 
-    # Bo'laklash xarajatlari (ishchi kuchi, qadoqlash...) naqd deb hisoblanadi
-    # va kassadan chiqim sifatida yoziladi.
+    # Bo'laklash xarajatlari (ishchi kuchi, qadoqlash...) tanlangan kassadan
+    # (bo'sh bo'lsa Naqd kassa) chiqim sifatida yoziladi.
     if total_expenses > 0:
         cash_service.record_cash_out(
             amount=total_expenses, transaction_type=CashTransaction.TransactionType.EXPENSE,
             date=butchering.date, reference=reference, created_by=user,
+            register=butchering.cash_register,
         )
 
     for output in outputs:
@@ -138,6 +139,7 @@ def cancel_butchering(butchering: Butchering, *, user=None) -> Butchering:
         cash_service.record_cash_in(
             amount=total_expenses, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
             date=butchering.date, reference=f'REVERSE:{reference}', created_by=user,
+            register=butchering.cash_register,
         )
 
     butchering.status = Butchering.Status.CANCELLED

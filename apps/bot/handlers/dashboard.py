@@ -55,7 +55,7 @@ def dashboard(message, tg_user):
             stock_rows.append((product.name, qty))
     stock_rows.sort(key=lambda r: r[1], reverse=True)
 
-    kassa_balance = cash_service.get_balance()
+    kassa_balance = '\n'.join(f"{b['register'].name}: {som(b['balance'])}" for b in cash_service.get_balances())
 
     lines = [
         '========================================',
@@ -78,7 +78,7 @@ def dashboard(message, tg_user):
         som(creditor_total),
         '',
         'Kassa balansi',
-        som(kassa_balance),
+        kassa_balance,
         '',
         'Ombor (jami)',
         kg(total_stock),

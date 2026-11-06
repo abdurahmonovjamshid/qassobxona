@@ -57,10 +57,17 @@ def product_update(request, pk):
 @login_required
 def product_detail(request, pk):
     product = get_object_or_404(Product.objects.select_related('category'), pk=pk)
+    from apps.inventory.models import Warehouse
     stock = inventory_service.get_stock(product)
+    warehouse_stock = [
+        {'warehouse': w, 'kg': inventory_service.get_stock(product, w),
+         'pieces': inventory_service.get_stock_pieces(product, w)}
+        for w in Warehouse.objects.filter(active=True)
+    ]
     return render(request, 'products/detail.html', {
         'product': product,
         'stock': stock,
+        'warehouse_stock': warehouse_stock,
         'stock_pieces': inventory_service.get_stock_pieces(product),
         'specifications': product.specifications.filter(active=True).prefetch_related('items__child_product'),
     })

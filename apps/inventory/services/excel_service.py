@@ -16,7 +16,7 @@ from apps.products.models import Product
 HEADER = ['ID', 'Kod', 'Nomi', 'Netto qoldiq (kg)', 'Dona', "Tannarx (so'm/kg)"]
 
 
-def export_inventory_workbook() -> HttpResponse:
+def export_inventory_workbook(warehouse=None) -> HttpResponse:
     """Faol mahsulotlarning joriy qoldig'i va o'rtacha tannarxini .xlsx
     faylga chiqaradi — shu fayl keyin to'g'irlanib qayta import qilinishi
     mumkin. `ID`, `Kod`, `Nomi` ustunlari faqat ma'lumot uchun — ularni
@@ -28,9 +28,8 @@ def export_inventory_workbook() -> HttpResponse:
     for cell in ws[1]:
         cell.font = cell.font.copy(bold=True)
 
-    # Import natijasi asosiy omborga yoziladi, shuning uchun eksport ham
-    # faqat asosiy ombor qoldig'ini chiqaradi.
-    warehouse = inventory_service.resolve_warehouse(None)
+    # Eksport va import bitta tanlangan ombor bo'yicha ishlaydi.
+    warehouse = inventory_service.resolve_warehouse(warehouse)
     for product in Product.objects.filter(active=True).select_related('category').order_by('name'):
         ws.append([
             product.id,
@@ -46,7 +45,7 @@ def export_inventory_workbook() -> HttpResponse:
         ws.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 10), 40)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="ombor.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="ombor-{warehouse.pk}.xlsx"'
     wb.save(response)
     return response
 

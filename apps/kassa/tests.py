@@ -37,3 +37,65 @@ class KassaAddBalanceViewTests(TestCase):
         self.client.force_login(self.superuser)
         self._post(amount='0')
         self.assertEqual(cash_service.get_balance(), Decimal('0'))
+
+
+class CashRegisterTests(TestCase):
+    """Naqd va Karta kassa alohida hisoblanadi; har bir amal tanlangan kassaga yoziladi."""
+
+    def setUp(self):
+        from apps.kassa.models import CashRegister
+        from apps.suppliers.models import Supplier
+        self.cash = CashRegister.for_payment_type('CASH')
+        self.card = CashRegister.for_payment_type('CARD')
+        self.supplier = Supplier.objects.create(name='Ferma')
+
+    def test_balances_are_separate(self):
+        from apps.kassa.services import cash_service
+        cash_service.record_manual_balance(amount=Decimal('100'), date=timezone.localdate(), register=self.card)
+        self.assertEqual(cash_service.get_balance(self.card), Decimal('100'))
+        self.assertEqual(cash_service.get_balance(), Decimal('0'))
+        self.assertEqual([b['register'].code for b in cash_service.get_balances()], ['CASH', 'CARD'])
+
+    def test_card_out_checks_card_balance(self):
+        from django.core.exceptions import ValidationError
+        from apps.kassa.services import cash_service
+        from apps.payments.services import payment_service
+        cash_service.record_manual_balance(amount=Decimal('1000'), date=timezone.localdate(), register=self.cash)
+        with self.assertRaises(ValidationError):
+            payment_service.create_payment(
+                amount=Decimal('500'), date=timezone.localdate(), supplier=self.supplier, cash_register=self.card,
+            )
+
+    def test_cancel_payment_reverses_into_same_kassa(self):
+        from apps.kassa.services import cash_service
+        from apps.payments.services import payment_service
+        payment = payment_service.create_payment(
+            amount=Decimal('300'), date=timezone.localdate(), customer=self._customer(), cash_register=self.card,
+        )
+        self.assertEqual(cash_service.get_balance(self.card), Decimal('300'))
+        payment_service.delete_payment(payment)
+        self.assertEqual(cash_service.get_balance(self.card), Decimal('0'))
+        self.assertEqual(cash_service.get_balance(self.cash), Decimal('0'))
+
+    def test_default_payment_goes_to_cash(self):
+        from apps.kassa.services import cash_service
+        from apps.payments.services import payment_service
+        payment = payment_service.create_payment(amount=Decimal('50'), date=timezone.localdate(), customer=self._customer())
+        self.assertEqual(payment.cash_register, self.cash)
+        self.assertEqual(cash_service.get_balance(self.cash), Decimal('50'))
+
+    def test_expense_from_card(self):
+        from apps.expenses.models import ExpenseCategory
+        from apps.expenses.services import create_expense
+        from apps.kassa.services import cash_service
+        cash_service.record_manual_balance(amount=Decimal('200'), date=timezone.localdate(), register=self.card)
+        expense = create_expense(
+            category=ExpenseCategory.objects.create(name='Svet'), amount=Decimal('80'),
+            date=timezone.localdate(), cash_register=self.card,
+        )
+        self.assertEqual(expense.payment_type, 'CARD')
+        self.assertEqual(cash_service.get_balance(self.card), Decimal('120'))
+
+    def _customer(self):
+        from apps.customers.models import Customer
+        return Customer.objects.create(name='Ali aka')

@@ -22,6 +22,7 @@ from apps.bot.inputs import is_skip, parse_decimal, parse_int
 from apps.bot.links import customer_link
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
+from apps.bot.warehouses import ask_warehouse, register_warehouse_picker, selected_warehouse
 from apps.payments.services import payment_service
 from apps.sales.models import Sale, SaleItem
 from apps.sales.services import sale_service
@@ -29,9 +30,11 @@ from apps.sales.services import sale_service
 logger = logging.getLogger(__name__)
 
 register_pagination('s_cust', choices.active_customers)
-register_pagination('s_prod', choices.active_products_with_stock)
-register_pagination('s_ptype', lambda: choices.PAYMENT_TYPES)
-register_pagination('s_pay_type', lambda: choices.PAYMENT_TYPES)
+register_pagination(
+    's_prod', lambda tg_user: choices.active_products_with_stock(selected_warehouse(tg_user)), needs_user=True,
+)
+register_pagination('s_ptype', choices.cash_registers)
+register_pagination('s_pay_type', choices.cash_registers)
 
 
 @register_menu(keyboards.MENU_SALES)
@@ -57,8 +60,24 @@ def pick_customer(call, tg_user):
     from apps.customers.models import Customer
     customer = Customer.objects.get(pk=customer_id)
     bot.answer_callback_query(call.id, customer.name)
-    set_state(tg_user, 'sale.date', customer_id=customer_id, customer_name=customer.name)
-    send_calendar(call.message.chat.id, 's_date', 'Sotuv sanasi?')
+    set_state(tg_user, 'sale.picking_warehouse', customer_id=customer_id, customer_name=customer.name)
+    ask_warehouse(call.message.chat.id, tg_user, 's_wh', 'Qaysi ombordan sotiladi?')
+
+
+def _after_warehouse(chat_id, tg_user):
+    set_state(tg_user, 'sale.date')
+    send_calendar(chat_id, 's_date', 'Sotuv sanasi?')
+
+
+register_warehouse_picker('s_wh', _after_warehouse)
+
+
+def _send_product_picker(chat_id, tg_user):
+    warehouse = selected_warehouse(tg_user)
+    send_picker(
+        chat_id, 's_prod', choices.active_products_with_stock(warehouse),
+        f'Mahsulotni tanlang ({warehouse.name} qoldig\'i):',
+    )
 
 
 def _on_date_picked(call, tg_user, picked):
@@ -75,7 +94,7 @@ register_calendar('s_date', _on_date_picked)
 
 def _on_due_date_picked(call, tg_user, picked):
     set_state(tg_user, 'sale.picking_item', due_date=picked.isoformat())
-    send_picker(call.message.chat.id, 's_prod', choices.active_products_with_stock(), 'Mahsulotni tanlang:')
+    _send_product_picker(call.message.chat.id, tg_user)
 
 
 register_calendar('s_due', _on_due_date_picked)
@@ -85,7 +104,7 @@ register_calendar('s_due', _on_due_date_picked)
 def pick_no_due_date(call, tg_user):
     bot.answer_callback_query(call.id)
     set_state(tg_user, 'sale.picking_item', due_date=None)
-    send_picker(call.message.chat.id, 's_prod', choices.active_products_with_stock(), 'Mahsulotni tanlang:')
+    _send_product_picker(call.message.chat.id, tg_user)
 
 
 @register_callback('s_prod')
@@ -187,7 +206,7 @@ def _cart_text(items):
 def item_more(call, tg_user):
     bot.answer_callback_query(call.id)
     set_state(tg_user, 'sale.picking_item')
-    send_picker(call.message.chat.id, 's_prod', choices.active_products_with_stock(), 'Mahsulotni tanlang:')
+    _send_product_picker(call.message.chat.id, tg_user)
 
 
 @register_callback('sitem_done')
@@ -215,7 +234,7 @@ def on_payment_amount(message, tg_user):
         _send_confirm(message.chat.id, tg_user)
         return
     set_state(tg_user, 'sale.picking_payment_type', paid_amount=str(amount))
-    send_picker(message.chat.id, 's_ptype', choices.PAYMENT_TYPES, "To'lov turi:")
+    send_picker(message.chat.id, 's_ptype', choices.cash_registers(), "Qaysi kassa?")
 
 
 @register_callback('s_ptype')
@@ -230,6 +249,7 @@ def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     lines = [
         f"Mijoz: {data['customer_name']}",
+        f"Ombor: {selected_warehouse(tg_user).name}",
         f"Sana: {date_fmt(data['date'])}",
     ]
     if data.get('due_date'):
@@ -257,6 +277,7 @@ def confirm_sale(call, tg_user):
                 sale_number=sale_service.generate_sale_number(),
                 date=data['date'],
                 due_date=data.get('due_date'),
+                warehouse=selected_warehouse(tg_user),
                 status=Sale.Status.DRAFT,
                 created_by=user,
             )
@@ -366,7 +387,7 @@ def on_pay_existing_amount(message, tg_user):
         bot.send_message(message.chat.id, "Summa musbat bo'lishi kerak. Qayta kiriting:")
         return
     set_state(tg_user, 'sale.pay_existing_type', pay_amount=str(amount))
-    send_picker(message.chat.id, 's_pay_type', choices.PAYMENT_TYPES, "To'lov turi:")
+    send_picker(message.chat.id, 's_pay_type', choices.cash_registers(), "Qaysi kassa?")
 
 
 @register_callback('s_pay_type')

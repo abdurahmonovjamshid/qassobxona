@@ -1,20 +1,19 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.common.date_filters import get_date_range
 from apps.expenses.forms import ExpenseForm
 from apps.expenses.models import Expense, ExpenseCategory
-from apps.kassa.models import CashTransaction
+from apps.expenses import services as expense_services
 from apps.kassa.services import cash_service
 
 
 @login_required
 def expense_list(request):
-    expenses = Expense.objects.select_related('category').all()
+    expenses = Expense.objects.select_related('category', 'cash_register').all()
     category_id = request.GET.get('category')
     date_from, date_to = get_date_range(request)
     if category_id:
@@ -29,7 +28,7 @@ def expense_list(request):
         'categories': ExpenseCategory.objects.filter(active=True),
         'date_from': date_from,
         'date_to': date_to,
-        'cash_balance': cash_service.get_balance(),
+        'balances': cash_service.get_balances(),
     })
 
 
@@ -38,16 +37,13 @@ def expense_create(request):
     if request.method == 'POST':
         form = ExpenseForm(request.POST)
         if form.is_valid():
-            expense = form.save(commit=False)
-            expense.created_by = request.user
+            data = form.cleaned_data
             try:
-                with transaction.atomic():
-                    expense.save()
-                    if expense.payment_type == Expense.PaymentType.CASH:
-                        cash_service.record_cash_out(
-                            amount=expense.amount, transaction_type=CashTransaction.TransactionType.EXPENSE,
-                            date=expense.date, reference=f'EXPENSE:{expense.pk}', created_by=request.user,
-                        )
+                expense_services.create_expense(
+                    category=data['category'], amount=data['amount'], date=data['date'],
+                    description=data.get('description', ''), cash_register=data.get('cash_register'),
+                    user=request.user,
+                )
                 messages.success(request, "Xarajat qo'shildi.")
                 return redirect('expenses:list')
             except ValidationError as exc:
@@ -56,5 +52,5 @@ def expense_create(request):
         form = ExpenseForm(initial={'date': timezone.localdate()})
     return render(request, 'expenses/form.html', {
         'form': form,
-        'cash_balance': cash_service.get_balance(),
+        'balances': cash_service.get_balances(),
     })

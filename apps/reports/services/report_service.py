@@ -58,14 +58,23 @@ def purchase_report(*, date_from=None, date_to=None, supplier_id=None):
     }
 
 
-def inventory_report():
+def inventory_report(warehouse=None):
+    """`warehouse` berilsa shu ombor bo'yicha, aks holda barcha omborlar
+    jami. Jami hisobotda omborlar orasidagi ko'chirishlar kirim/chiqimga
+    qo'shilmaydi (ular umumiy qoldiqni o'zgartirmaydi)."""
     from apps.inventory.services import inventory_service
+
+    movements = StockMovement.objects.all()
+    if warehouse is not None:
+        movements = movements.filter(warehouse=warehouse)
+    else:
+        movements = movements.exclude(movement_type=StockMovement.MovementType.TRANSFER)
 
     rows = []
     for product in Product.objects.filter(active=True):
-        total_in = StockMovement.objects.filter(
+        total_in = movements.filter(
             product=product, direction=StockMovement.Direction.IN).aggregate(s=Sum('quantity'))['s'] or ZERO
-        total_out = StockMovement.objects.filter(
+        total_out = movements.filter(
             product=product, direction=StockMovement.Direction.OUT).aggregate(s=Sum('quantity'))['s'] or ZERO
         rows.append({
             'product': product,

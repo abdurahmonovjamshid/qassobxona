@@ -34,8 +34,8 @@
                 {{ form.paid_amount }}
             </div>
             <div class="col-md-1">
-                <label class="form-label">{{ form.payment_type.label }}</label>
-                {{ form.payment_type }}
+                <label class="form-label">{{ form.cash_register.label }}</label>
+                {{ form.cash_register }}
             </div>
             <div class="col-md-12">
                 <label class="form-label">Izoh</label>
@@ -168,9 +168,9 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'js/formset.js' %}"></script>
-<script src="{% static 'js/picker.js' %}"></script>
-<script src="{% static 'js/purchase_form.js' %}"></script>
+<script src="{% static 'js/formset.js' %}?v=2"></script>
+<script src="{% static 'js/picker.js' %}?v=2"></script>
+<script src="{% static 'js/purchase_form.js' %}?v=2"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         window.PurchaseFormInit({

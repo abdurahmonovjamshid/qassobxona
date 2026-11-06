@@ -16,6 +16,22 @@ def _item_kg(item) -> Decimal:
     return kg or Decimal('0')
 
 
+def _item_price(item) -> Decimal:
+    # Xarid qatorida 1 kg narxi `price_per_kg`, sotuv qatorida esa `price`.
+    return item.price_per_kg if hasattr(item, 'price_per_kg') else item.price
+
+
+def _line_items_prices(line_items):
+    """1 kg narxi ustuni: hamma qatorda narx bir xil bo'lsa — son, aks holda
+    "Mahsulotlar" ustunidagi qatorlar tartibida har birining narxi."""
+    prices = [_item_price(item) for item in line_items]
+    if not prices:
+        return None
+    if len(set(prices)) == 1:
+        return float(prices[0])
+    return '\n'.join(f'{price.normalize():f}' for price in prices)
+
+
 def _line_items_summary(line_items):
     """Hujjat qatorlarini "Mahsulot — 12.5 kg (3 dona)" ko'rinishidagi matnga
     va jami kg'ga aylantiradi."""
@@ -38,28 +54,31 @@ def _write_sheet(ws, title, statement):
     ws.append(["Boshlang'ich saldo", float(statement['opening_balance'])])
     ws.append([])
 
-    header = ['Sana', 'Operatsiya', 'Turkum', 'Mahsulotlar', 'Jami kg', 'Kirim (+)', 'Chiqim (-)', 'Balans', 'Izoh']
+    header = ['Sana', 'Operatsiya', 'Turkum', 'Mahsulotlar', 'Jami kg', '1 kg narxi', 'Kirim (+)', 'Chiqim (-)', 'Balans', 'Izoh']
     ws.append(header)
     for cell in ws[ws.max_row]:
         cell.font = Font(bold=True)
 
     for row in statement['rows']:
-        products, total_kg = _line_items_summary(row.get('line_items') or [])
+        line_items = row.get('line_items') or []
+        products, total_kg = _line_items_summary(line_items)
         ws.append([
             row['date'].strftime('%d.%m.%Y'),
             row['op'],
             row.get('category', ''),
             products,
             float(total_kg) if total_kg else None,
+            _line_items_prices(line_items),
             float(row['debit']),
             float(row['credit']),
             float(row['balance']),
             row.get('notes') or '',
         ])
-        ws.cell(row=ws.max_row, column=4).alignment = Alignment(wrap_text=True, vertical='top')
+        for column in (4, 6):
+            ws.cell(row=ws.max_row, column=column).alignment = Alignment(wrap_text=True, vertical='top')
 
     ws.append([])
-    ws.append(['Yakuniy saldo', '', '', '', '', '', '', float(statement['closing_balance'])])
+    ws.append(['Yakuniy saldo', '', '', '', '', '', '', '', float(statement['closing_balance'])])
     ws[f'A{ws.max_row}'].font = Font(bold=True)
 
     for column_cells in ws.columns:

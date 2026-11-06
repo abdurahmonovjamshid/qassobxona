@@ -109,7 +109,7 @@ def index(request):
     top_suppliers_labels = [row['supplier__name'] for row in top_suppliers_qs]
     top_suppliers_values = [float(row['total']) for row in top_suppliers_qs]
 
-    kassa_balance = cash_service.get_balance()
+    kassa_balances = cash_service.get_balances()
 
     context = {
         'today': today,
@@ -130,7 +130,7 @@ def index(request):
         'top_products_labels': json.dumps(top_products_labels),
         'top_products_values': json.dumps(top_products_values),
         'debitor_creditor_values': json.dumps([float(debitor_total), float(creditor_total)]),
-        'kassa_balance': kassa_balance,
+        'kassa_balances': kassa_balances,
         'top_customers_labels': json.dumps(top_customers_labels),
         'top_customers_values': json.dumps(top_customers_values),
         'top_suppliers_labels': json.dumps(top_suppliers_labels),

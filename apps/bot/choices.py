@@ -8,9 +8,10 @@ def active_products():
     return [(p.id, p.name) for p in Product.objects.filter(active=True).order_by('name')]
 
 
-def active_products_with_stock():
+def active_products_with_stock(warehouse=None):
+    """`warehouse` berilsa shu ombor qoldig'i, aks holda barcha omborlar jami."""
     from apps.products.models import Product
-    stock = inventory_service.get_all_stock()
+    stock = inventory_service.get_all_stock(warehouse)
     return [
         (p.id, f'{p.name} ({stock.get(p.id, 0)} kg)')
         for p in Product.objects.filter(active=True).order_by('name')
@@ -64,12 +65,14 @@ BUTCHERING_EXPENSE_TYPES = [
     ('OTHER', 'Boshqa'),
 ]
 
-PAYMENT_TYPES = [
-    ('CASH', 'Naqd'),
-    ('CARD', 'Karta'),
-    ('TRANSFER', "O'tkazma"),
-    ('OTHER', 'Boshqa'),
-]
+def cash_registers():
+    """Pulli amallarda "Qaysi kassa?" tanlovi. Kod (CASH/CARD) to'lov turi
+    sifatida servislarga beriladi — `payment_service.create_payment` va
+    `expense services` undan kassani topadi. Naqd kassa birinchi turadi."""
+    from apps.kassa.models import CashRegister
+    CashRegister.get_default()
+    icons = {'CASH': '💵', 'CARD': '💳'}
+    return [(r.code, f"{icons.get(r.code, '')} {r.name}".strip()) for r in CashRegister.objects.all()]
 
 
 def confirmed_sales_with_debt(customer_id=None):

@@ -105,7 +105,8 @@ def inventory_count_detail(request, pk):
 
 @login_required
 def inventory_export(request):
-    return excel_service.export_inventory_workbook()
+    warehouse = Warehouse.objects.filter(pk=request.GET.get('warehouse') or None).first()
+    return excel_service.export_inventory_workbook(warehouse)
 
 
 @login_required
@@ -122,6 +123,7 @@ def inventory_import(request):
                     with transaction.atomic():
                         count = InventoryCount.objects.create(
                             date=timezone.localdate(),
+                            warehouse=form.cleaned_data['warehouse'],
                             notes="Excel orqali import qilingan.",
                             status=InventoryCount.Status.DRAFT,
                             created_by=request.user,
@@ -140,8 +142,11 @@ def inventory_import(request):
                 except ValidationError as exc:
                     messages.error(request, '; '.join(exc.messages))
     else:
-        form = InventoryImportForm()
-    return render(request, 'inventory/import.html', {'form': form})
+        form = InventoryImportForm(initial={'warehouse': inventory_service.resolve_warehouse(None)})
+    return render(request, 'inventory/import.html', {
+        'form': form, 'warehouses': Warehouse.objects.filter(active=True),
+        'warehouse': inventory_service.resolve_warehouse(None),
+    })
 
 
 @login_required

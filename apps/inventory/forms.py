@@ -66,6 +66,11 @@ InventoryCountItemFormSet = inlineformset_factory(
 
 
 class InventoryImportForm(forms.Form):
+    warehouse = forms.ModelChoiceField(
+        queryset=Warehouse.objects.filter(active=True), empty_label=None, label='Ombor', required=False,
+        help_text="Bo'sh bo'lsa asosiy ombor",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
     file = forms.FileField(
         label='Excel fayl (.xlsx)',
         widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.xlsx'}),

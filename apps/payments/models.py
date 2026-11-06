@@ -8,10 +8,10 @@ from django.db.models import Case, DecimalField, F, Sum, When
 
 class Payment(models.Model):
     class PaymentType(models.TextChoices):
-        CASH = 'CASH', 'Cash'
-        CARD = 'CARD', 'Card'
-        TRANSFER = 'TRANSFER', 'Transfer'
-        OTHER = 'OTHER', 'Other'
+        CASH = 'CASH', 'Naqd'
+        CARD = 'CARD', 'Karta'
+        TRANSFER = 'TRANSFER', "O'tkazma"
+        OTHER = 'OTHER', 'Boshqa'
 
     class Direction(models.TextChoices):
         """Pulning yo'nalishi. Avval bu maydon yo'q edi va yo'nalish
@@ -26,6 +26,10 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     direction = models.CharField(max_length=3, choices=Direction.choices, default=Direction.IN)
     payment_type = models.CharField(max_length=20, choices=PaymentType.choices, default=PaymentType.CASH)
+    cash_register = models.ForeignKey(
+        'kassa.CashRegister', on_delete=models.PROTECT, null=True, blank=True, related_name='payments',
+        verbose_name='Kassa', help_text="Pul qaysi kassaga kirdi/chiqdi (bo'sh — kassaga ta'sir qilmaydi)",
+    )
     customer = models.ForeignKey('customers.Customer', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     supplier = models.ForeignKey('suppliers.Supplier', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     sale = models.ForeignKey('sales.Sale', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')

@@ -134,7 +134,7 @@ def sale_create(request):
                         if paid_amount > 0:
                             payment_service.create_payment(
                                 amount=paid_amount,
-                                payment_type=form.cleaned_data.get('payment_type') or 'CASH',
+                                cash_register=form.cleaned_data.get('cash_register'),
                                 date=sale.date, customer=sale.customer, sale=sale, user=request.user,
                             )
                     messages.success(request, f"Sotuv {sale.sale_number} muvaffaqiyatli tasdiqlandi.")

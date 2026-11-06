@@ -88,6 +88,7 @@
     <div class="card table-card mb-3">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <span>Qo'shimcha xarajatlar (ishchi kuchi, qadoqlash...) — dona/bo'lak soni bo'yicha taqsimlanadi</span>
+            <span class="d-inline-flex align-items-center gap-2"><span class="small text-muted text-nowrap">{{ form.cash_register.label }}:</span>{{ form.cash_register }}</span>
             <button type="button" class="btn btn-sm btn-outline-primary" id="add-expense-rows">+ Qo'shish</button>
         </div>
         <div class="table-responsive">
@@ -151,9 +152,9 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'js/formset.js' %}"></script>
-<script src="{% static 'js/picker.js' %}"></script>
-<script src="{% static 'js/butchering_form.js' %}"></script>
+<script src="{% static 'js/formset.js' %}?v=2"></script>
+<script src="{% static 'js/picker.js' %}?v=2"></script>
+<script src="{% static 'js/butchering_form.js' %}?v=2"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         window.ButcheringFormInit({

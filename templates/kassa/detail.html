@@ -8,20 +8,26 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-4">
-        <div class="card stat-card">
+        {% for b in balances %}
+        <div class="card stat-card {% if not forloop.last %}mb-3{% endif %}">
             <div class="card-body">
-                <div class="stat-label">Joriy balans</div>
-                <div class="stat-value {% if balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ balance|uzsum }} so'm</div>
+                <div class="stat-label">{{ b.register.name }} — joriy balans</div>
+                <div class="stat-value {% if b.balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ b.balance|uzsum }} so'm</div>
             </div>
         </div>
+        {% endfor %}
     </div>
     {% if user.is_superuser %}
     <div class="col-md-8">
         <div class="card stat-card">
             <div class="card-body">
-                <div class="stat-label mb-2">Kassaga naqd pul kiritish/tuzatish (boshlang'ich balans)</div>
+                <div class="stat-label mb-2">Kassaga pul kiritish/tuzatish (boshlang'ich balans)</div>
                 <form method="post" action="{% url 'kassa:add_balance' %}" class="row g-2 align-items-end">
                     {% csrf_token %}
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small">{{ balance_form.cash_register.label }}</label>
+                        {{ balance_form.cash_register }}
+                    </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label small">{{ balance_form.amount.label }}</label>
                         {{ balance_form.amount }}
@@ -30,7 +36,7 @@
                         <label class="form-label small">{{ balance_form.date.label }}</label>
                         {{ balance_form.date }}
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-10">
                         <label class="form-label small">{{ balance_form.notes.label }}</label>
                         {{ balance_form.notes }}
                     </div>
@@ -50,6 +56,14 @@
 </div>
 
 <form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto">
+        <select name="register" class="form-select">
+            <option value="">Barcha kassalar</option>
+            {% for r in registers %}
+                <option value="{{ r.id }}" {% if r.id == register.id %}selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
     <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>
     <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>
     <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
@@ -59,18 +73,19 @@
 <div class="card table-card">
     <div class="table-responsive">
         <table class="table mb-0 align-middle">
-            <thead><tr><th>Sana</th><th>Turi</th><th class="text-end">Summa</th><th>Havola</th><th>Izoh</th></tr></thead>
+            <thead><tr><th>Sana</th><th>Kassa</th><th>Turi</th><th class="text-end">Summa</th><th>Havola</th><th>Izoh</th></tr></thead>
             <tbody>
             {% for t in transactions %}
                 <tr>
                     <td>{{ t.date|date:"d.m.Y" }}</td>
+                    <td>{{ t.register.name }}</td>
                     <td>{{ t.get_transaction_type_display }}</td>
                     <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|uzsum }}</td>
                     <td class="small text-muted">{{ t.reference }}</td>
                     <td class="small text-muted">{{ t.notes }}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="5" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
             {% endfor %}
             </tbody>
         </table>

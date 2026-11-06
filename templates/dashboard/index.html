@@ -78,7 +78,9 @@
         <div class="card stat-card h-100">
             <div class="card-body">
                 <div class="stat-label">Kassa balansi</div>
-                <div class="stat-value {% if kassa_balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ kassa_balance|uzsum }} so'm</div>
+                {% for b in kassa_balances %}
+                <div class="{% if b.balance < 0 %}text-danger{% else %}text-success{% endif %}"><span class="small text-muted">{{ b.register.name }}:</span> <span class="fs-5 fw-semibold">{{ b.balance|uzsum }} so'm</span></div>
+                {% endfor %}
             </div>
         </div>
     </div>

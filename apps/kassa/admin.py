@@ -1,13 +1,22 @@
 from django import forms
 from django.contrib import admin
 
-from .models import CashTransaction
+from .models import CashRegister, CashTransaction
+
+
+@admin.register(CashRegister)
+class CashRegisterAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'is_default')
+    readonly_fields = ('code',)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class CashTransactionAdminForm(forms.ModelForm):
     class Meta:
         model = CashTransaction
-        fields = ['amount', 'date', 'notes']
+        fields = ['register', 'amount', 'date', 'notes']
         help_texts = {
             'amount': "Musbat = kassaga kirim, manfiy = kassadan chiqim.",
         }
@@ -18,8 +27,8 @@ class CashTransactionAdmin(admin.ModelAdmin):
     """Kassa balansini qo'lda tuzatish FAQAT shu yerdan (Django admin, superuser)
     amalga oshiriladi — ilova ichidagi sahifalar balansni faqat o'qiydi."""
 
-    list_display = ('date', 'transaction_type', 'amount', 'reference', 'created_by')
-    list_filter = ('transaction_type', 'date')
+    list_display = ('date', 'register', 'transaction_type', 'amount', 'reference', 'created_by')
+    list_filter = ('register', 'transaction_type', 'date')
     search_fields = ('reference', 'notes')
     date_hierarchy = 'date'
     ordering = ('-date', '-id')

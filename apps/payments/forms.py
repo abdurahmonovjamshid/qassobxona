@@ -1,6 +1,7 @@
 from django import forms
 
 from apps.customers.models import Customer
+from apps.kassa.forms import setup_cash_register_field
 from apps.payments.models import Payment
 from apps.purchases.models import Purchase
 from apps.sales.models import Sale
@@ -10,10 +11,10 @@ from apps.suppliers.models import Supplier
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ['direction', 'payment_type', 'amount', 'date', 'customer', 'supplier', 'sale', 'purchase', 'notes']
+        fields = ['direction', 'cash_register', 'amount', 'date', 'customer', 'supplier', 'sale', 'purchase', 'notes']
         widgets = {
             'direction': forms.Select(attrs={'class': 'form-select'}),
-            'payment_type': forms.Select(attrs={'class': 'form-select'}),
+            'cash_register': forms.Select(attrs={'class': 'form-select'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'customer': forms.Select(attrs={'class': 'form-select'}),
@@ -34,6 +35,9 @@ class PaymentForm(forms.ModelForm):
         self.fields['purchase'].queryset = Purchase.objects.filter(status=Purchase.Status.CONFIRMED)
         self.fields['purchase'].required = False
         self.fields['notes'].required = False
+        self.fields['cash_register'].required = False
+        self.fields['cash_register'].empty_label = None
+        setup_cash_register_field(self)
 
     def clean(self):
         cleaned = super().clean()

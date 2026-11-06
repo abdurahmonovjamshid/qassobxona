@@ -19,9 +19,11 @@ from apps.bot.handlers.common import register_menu
 from apps.bot.inputs import is_skip, parse_decimal, parse_int
 from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
 from apps.bot.state import register_callback, register_state, set_state
+from apps.bot.warehouses import ask_warehouse, register_warehouse_picker, selected_warehouse
 from apps.butchering.models import Butchering, ButcheringExpense, ButcheringOutput
 from apps.butchering.services import butchering_service
 from apps.inventory.services import inventory_service
+from apps.kassa.models import CashRegister
 
 register_pagination('b_iprod', choices.butchering_input_products)
 register_pagination('b_oprod', choices.active_products)
@@ -40,9 +42,8 @@ def butchering_menu(message, tg_user):
 @register_callback('bnew')
 def start_butchering(call, tg_user):
     bot.answer_callback_query(call.id)
-    set_state(tg_user, 'butch.picking_input', outputs=[], expenses=[])
-    items = choices.butchering_input_products()
-    if not items:
+    set_state(tg_user, 'butch.picking_warehouse', outputs=[], expenses=[])
+    if not choices.butchering_input_products():
         bot.send_message(
             call.message.chat.id,
             "Bo'laklash uchun kamida bitta faol spetsifikatsiyaga ega mahsulot yo'q. "
@@ -50,7 +51,15 @@ def start_butchering(call, tg_user):
         )
         tg_user.reset_state()
         return
-    send_picker(call.message.chat.id, 'b_iprod', items, 'Qaysi mahsulot bo\'laklanadi?')
+    ask_warehouse(call.message.chat.id, tg_user, 'b_wh', "Qaysi omborda bo'laklanadi?")
+
+
+def _after_warehouse(chat_id, tg_user):
+    set_state(tg_user, 'butch.picking_input')
+    send_picker(chat_id, 'b_iprod', choices.butchering_input_products(), 'Qaysi mahsulot bo\'laklanadi?')
+
+
+register_warehouse_picker('b_wh', _after_warehouse)
 
 
 @register_callback('b_iprod')
@@ -58,12 +67,13 @@ def pick_input_product(call, tg_user):
     product_id = int(call.data.split(':', 1)[1])
     from apps.products.models import Product
     product = Product.objects.get(pk=product_id)
-    stock = inventory_service.get_stock(product)
+    warehouse = selected_warehouse(tg_user)
+    stock = inventory_service.get_stock(product, warehouse)
     bot.answer_callback_query(call.id, product.name)
     set_state(tg_user, 'butch.input_weight', input_product_id=product_id, input_product_name=product.name)
     bot.send_message(
         call.message.chat.id,
-        f'{product.name} — necha kg bo\'laklanadi? (ombor qoldig\'i: {kg(stock)})',
+        f'{product.name} — necha kg bo\'laklanadi? ({warehouse.name} qoldig\'i: {kg(stock)})',
         reply_markup=keyboards.cancel_only(),
     )
 
@@ -239,7 +249,7 @@ def on_expense_notes(message, tg_user):
     set_state(tg_user, 'butch.picking_output', **data, expenses=expenses)
 
     total = sum((Decimal(e['amount']) for e in expenses), Decimal('0'))
-    bot.send_message(message.chat.id, f"Xarajatlar jami: {som(total)} (naqd kassadan chiqim sifatida yoziladi)")
+    bot.send_message(message.chat.id, f"Xarajatlar jami: {som(total)} (oxirida kassa tanlanadi)")
     bot.send_message(
         message.chat.id, "Yana xarajat qo'shamizmi?",
         reply_markup=keyboards.add_more_or_done('bexp_more:1', 'bexp_done:1'),
@@ -255,6 +265,17 @@ def expense_more(call, tg_user):
 @register_callback('bexp_done')
 def expense_done(call, tg_user):
     bot.answer_callback_query(call.id)
+    send_picker(call.message.chat.id, 'b_kassa', choices.cash_registers(), "Xarajatlar qaysi kassadan to'lanadi?")
+
+
+register_pagination('b_kassa', choices.cash_registers)
+
+
+@register_callback('b_kassa')
+def pick_kassa(call, tg_user):
+    code = call.data.split(':', 1)[1]
+    bot.answer_callback_query(call.id)
+    set_state(tg_user, tg_user.state, cash_register_code=code)
     _send_confirm(call.message.chat.id, tg_user)
 
 
@@ -262,6 +283,7 @@ def _send_confirm(chat_id, tg_user):
     data = tg_user.data
     lines = [
         f"Kiritilayotgan mahsulot: {data['input_product_name']}",
+        f"Ombor: {selected_warehouse(tg_user).name}",
         f"Sana: {date_fmt(data['date'])}",
         '',
         _outputs_text(data['input_weight'], data.get('outputs', [])),
@@ -270,6 +292,8 @@ def _send_confirm(chat_id, tg_user):
     if expenses:
         exp_total = sum((Decimal(e['amount']) for e in expenses), Decimal('0'))
         lines.append(f"Qo'shimcha xarajatlar: {som(exp_total)}")
+        kassa_label = dict(choices.cash_registers()).get(data.get('cash_register_code') or 'CASH', '')
+        lines.append(f"Kassa: {kassa_label}")
     lines.append('')
     lines.append('Tasdiqlaysizmi?')
     bot.send_message(chat_id, '\n'.join(lines), reply_markup=keyboards.confirm_cancel_inline('bconfirm:1'))
@@ -288,6 +312,8 @@ def confirm_butchering_cb(call, tg_user):
                 input_weight=Decimal(data['input_weight']),
                 input_pieces=data.get('input_pieces', 0),
                 date=data['date'],
+                warehouse=selected_warehouse(tg_user),
+                cash_register=CashRegister.for_payment_type(data.get('cash_register_code') or 'CASH'),
                 status=Butchering.Status.DRAFT,
                 created_by=user,
             )

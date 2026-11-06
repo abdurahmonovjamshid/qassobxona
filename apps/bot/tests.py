@@ -406,3 +406,65 @@ class StatementFromNameLinkTests(TestCase):
 
         self.assertEqual(self._documents(sent), [])
         self.assertIn('topilmadi', sent[-1]['params']['text'])
+
+
+@patch('telebot.apihelper._make_request')
+class WarehouseFlowTests(TestCase):
+    """Botda tanlangan ombor hujjatga yoziladi va qoldiq shu ombordan olinadi."""
+
+    def setUp(self):
+        from apps.inventory.models import Warehouse
+        category = ProductCategory.objects.create(name='Asosiy', code='ASOS')
+        self.product = Product.objects.create(name='Lahm', code='LAHM', category=category, sale_price=Decimal('95000'))
+        self.customer = Customer.objects.create(name='Ali aka')
+        self.main = Warehouse.get_default()
+        self.second, _ = Warehouse.objects.get_or_create(name='2-sklad')
+        inventory_service.stock_in(
+            product=self.product, quantity=Decimal('10'), movement_type='PURCHASE',
+            unit_cost=Decimal('78000'), date='2026-01-01', warehouse=self.second,
+        )
+
+    def _sale_user(self, warehouse, qty):
+        return TgUser.objects.create(telegram_id=7, state='sale.confirm', data={
+            'customer_id': self.customer.id, 'customer_name': self.customer.name,
+            'warehouse_id': warehouse.id, 'warehouse_name': warehouse.name,
+            'date': '2026-01-10', 'due_date': None,
+            'items': [{
+                'product_id': self.product.id, 'product_name': self.product.name,
+                'quantity': qty, 'price': '95000', 'discount': '0', 'pieces': 0,
+            }],
+            'paid_amount': '0', 'payment_type': '',
+        })
+
+    def test_sale_from_selected_warehouse(self, mock_req):
+        mock_req.side_effect = _fake_response
+        sale_handlers.confirm_sale(_fake_call(), self._sale_user(self.second, '4'))
+        sale = Sale.objects.get(customer=self.customer)
+        self.assertEqual(sale.warehouse, self.second)
+        self.assertEqual(inventory_service.get_stock(self.product, self.second), Decimal('6'))
+
+    def test_sale_from_empty_warehouse_is_rejected(self, mock_req):
+        mock_req.side_effect = _fake_response
+        sale_handlers.confirm_sale(_fake_call(), self._sale_user(self.main, '4'))
+        self.assertFalse(Sale.objects.filter(customer=self.customer).exists())
+        self.assertEqual(inventory_service.get_stock(self.product, self.second), Decimal('10'))
+
+    def test_product_picker_shows_selected_warehouse_stock(self, mock_req):
+        from apps.bot import choices
+        items = dict(choices.active_products_with_stock(self.second))
+        self.assertIn('10', items[self.product.id])
+        items = dict(choices.active_products_with_stock(self.main))
+        self.assertIn('(0 kg)', items[self.product.id])
+
+    def test_bot_transfer_moves_stock(self, mock_req):
+        from apps.bot.handlers import inventory as inventory_handlers
+        mock_req.side_effect = _fake_response
+        tg_user = TgUser.objects.create(telegram_id=8, state='transfer.confirm', data={
+            'from_warehouse_id': self.second.id, 'from_warehouse_name': self.second.name,
+            'to_warehouse_id': self.main.id, 'to_warehouse_name': self.main.name,
+            'date': '2026-01-10',
+            'items': [{'product_id': self.product.id, 'product_name': self.product.name, 'quantity': '3', 'pieces': 0}],
+        })
+        inventory_handlers.confirm_transfer(_fake_call(), tg_user)
+        self.assertEqual(inventory_service.get_stock(self.product, self.second), Decimal('7'))
+        self.assertEqual(inventory_service.get_stock(self.product, self.main), Decimal('3'))

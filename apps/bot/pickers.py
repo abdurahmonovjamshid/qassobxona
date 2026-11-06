@@ -18,15 +18,17 @@ def send_picker(chat_id, prefix, items, title, page=0, extra_rows=None):
     )
 
 
-def register_pagination(prefix, items_fn):
+def register_pagination(prefix, items_fn, needs_user=False):
     """Har bir modul o'z picker'ini import vaqtida shu bilan ro'yxatdan
     o'tkazadi — sahifalash tugmasi bosilganda ro'yxat qaytadan hisoblanadi
-    va xabar shu joyida tahrirlanadi (yangi xabar yuborilmaydi)."""
+    va xabar shu joyida tahrirlanadi (yangi xabar yuborilmaydi).
+    `needs_user=True` bo'lsa `items_fn(tg_user)` chaqiriladi (masalan
+    tanlangan ombor qoldig'ini ko'rsatish uchun)."""
 
     @register_callback(f'{prefix}_pg')
     def _paginate(call, tg_user):
         page = int(call.data.split(':', 1)[1])
-        items = items_fn()
+        items = items_fn(tg_user) if needs_user else items_fn()
         bot.edit_message_reply_markup(
             call.message.chat.id, call.message.message_id,
             reply_markup=keyboards.picker(prefix, items, page=page),

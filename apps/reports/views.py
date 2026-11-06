@@ -38,7 +38,13 @@ def purchase_report_view(request):
 
 @login_required
 def inventory_report_view(request):
-    return render(request, 'reports/inventory.html', {'rows': report_service.inventory_report()})
+    from apps.inventory.models import Warehouse
+    warehouse = Warehouse.objects.filter(pk=request.GET.get('warehouse') or None).first()
+    return render(request, 'reports/inventory.html', {
+        'rows': report_service.inventory_report(warehouse),
+        'warehouses': Warehouse.objects.filter(active=True),
+        'warehouse': warehouse,
+    })
 
 
 @login_required

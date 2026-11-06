@@ -118,7 +118,7 @@ def purchase_create(request):
                         if paid_amount > 0:
                             payment_service.create_payment(
                                 amount=paid_amount,
-                                payment_type=form.cleaned_data.get('payment_type') or 'CASH',
+                                cash_register=form.cleaned_data.get('cash_register'),
                                 date=purchase.date, supplier=purchase.supplier, purchase=purchase,
                                 user=request.user,
                             )

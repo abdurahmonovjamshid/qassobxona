@@ -17,16 +17,20 @@ class ExpenseCategory(models.Model):
 
 class Expense(models.Model):
     class PaymentType(models.TextChoices):
-        CASH = 'CASH', 'Cash'
-        CARD = 'CARD', 'Card'
-        TRANSFER = 'TRANSFER', 'Transfer'
-        OTHER = 'OTHER', 'Other'
+        CASH = 'CASH', 'Naqd'
+        CARD = 'CARD', 'Karta'
+        TRANSFER = 'TRANSFER', "O'tkazma"
+        OTHER = 'OTHER', 'Boshqa'
 
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name='expenses')
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     date = models.DateField()
     description = models.TextField(blank=True)
     payment_type = models.CharField(max_length=20, choices=PaymentType.choices, default=PaymentType.CASH)
+    cash_register = models.ForeignKey(
+        'kassa.CashRegister', on_delete=models.PROTECT, null=True, blank=True, related_name='expenses',
+        verbose_name='Kassa',
+    )
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

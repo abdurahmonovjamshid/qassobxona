@@ -49,7 +49,7 @@
                         {% if p.customer %}<a href="{% url 'customers:detail' p.customer.pk %}">{{ p.customer.name }}</a>{% endif %}
                         {% if p.supplier %}<a href="{% url 'suppliers:detail' p.supplier.pk %}">{{ p.supplier.name }}</a>{% endif %}
                     </td>
-                    <td>{{ p.get_payment_type_display }}</td>
+                    <td>{{ p.cash_register.name|default:p.get_payment_type_display }}</td>
                     <td>
                         {% if p.sale %}<a href="{% url 'sales:detail' p.sale.pk %}">{{ p.sale.sale_number }}</a>{% if p.sale.status == 'CANCELLED' %} <span class="badge bg-secondary">bekor qilingan</span>{% endif %}{% endif %}
                         {% if p.purchase %}<a href="{% url 'purchases:detail' p.purchase.pk %}">{{ p.purchase.purchase_number }}</a>{% if p.purchase.status == 'CANCELLED' %} <span class="badge bg-secondary">bekor qilingan</span>{% endif %}{% endif %}

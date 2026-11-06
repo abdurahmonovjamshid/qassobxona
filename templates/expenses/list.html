@@ -9,7 +9,8 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card stat-card"><div class="card-body">
-        <div class="stat-label">Kassadagi balans</div><div class="stat-value {% if cash_balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ cash_balance|uzsum }}</div>
+        <div class="stat-label">Kassalardagi balans</div>
+        {% for b in balances %}<div><span class="small text-muted">{{ b.register.name }}:</span> <span class="fw-semibold {% if b.balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ b.balance|uzsum }}</span></div>{% endfor %}
     </div></div></div>
 </div>
 
@@ -37,7 +38,7 @@
                 <tr>
                     <td>{{ e.date|date:"d.m.Y" }}</td>
                     <td>{{ e.category.name }}</td>
-                    <td>{{ e.get_payment_type_display }}</td>
+                    <td>{{ e.cash_register.name|default:e.get_payment_type_display }}</td>
                     <td>{{ e.description }}</td>
                     <td class="text-end">{{ e.amount|uzsum }}</td>
                 </tr>
