@@ -20,6 +20,7 @@ def create_expense(*, category, amount, date, description='', cash_register=None
     cash_service.record_cash_out(
         amount=expense.amount, transaction_type=CashTransaction.TransactionType.EXPENSE,
         date=expense.date, reference=f'EXPENSE:{expense.pk}', created_by=user, register=register,
+        notes=(description or '')[:255],
     )
     return expense
 

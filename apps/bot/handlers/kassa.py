@@ -15,7 +15,12 @@ def kassa_menu(message, tg_user):
     lines = ['Kassa balanslari:']
     lines += [f"{b['register'].name}: {som(b['balance'])}" for b in cash_service.get_balances()]
     lines += ['', "So'nggi harakatlar:"]
-    for m in CashTransaction.objects.select_related('register')[:10]:
+    moves = cash_service.attach_document_info(CashTransaction.objects.select_related('register')[:10])
+    for m in moves:
         sign = '+' if m.amount >= 0 else ''
-        lines.append(f'{date_fmt(m.date)} [{m.register.name}] {m.get_transaction_type_display()}: {sign}{som(m.amount)}')
+        extra = ' — '.join(filter(None, [m.party, m.doc_notes]))
+        lines.append(
+            f'{date_fmt(m.date)} [{m.register.name}] {m.get_transaction_type_display()}: {sign}{som(m.amount)}'
+            + (f' ({extra})' if extra else '')
+        )
     bot.send_message(message.chat.id, '\n'.join(lines))

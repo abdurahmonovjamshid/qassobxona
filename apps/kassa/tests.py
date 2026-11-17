@@ -99,3 +99,26 @@ class CashRegisterTests(TestCase):
     def _customer(self):
         from apps.customers.models import Customer
         return Customer.objects.create(name='Ali aka')
+
+
+class KassaNotesTests(TestCase):
+    def test_kassa_page_shows_payment_and_expense_notes(self):
+        from apps.customers.models import Customer
+        from apps.expenses.models import ExpenseCategory
+        from apps.expenses.services import create_expense
+        from apps.payments.services import payment_service
+        user = get_user_model().objects.create_user(username='k', password='pass12345')
+        self.client.force_login(user)
+        customer = Customer.objects.create(name='Ali aka')
+        payment = payment_service.create_payment(
+            amount=Decimal('500'), date=timezone.localdate(), customer=customer, notes="Avans uchun",
+        )
+        create_expense(category=ExpenseCategory.objects.create(name='Svet'), amount=Decimal('100'),
+                       date=timezone.localdate(), description='Noyabr svet puli')
+        payment_service.delete_payment(payment)
+        payment_service.create_payment(amount=Decimal('50'), date=timezone.localdate(), customer=customer)
+
+        content = self.client.get(reverse('kassa:detail')).content.decode()
+        self.assertEqual(content.count('Avans uchun'), 2)  # to'lov va uning bekor qilinishi
+        self.assertIn('Noyabr svet puli', content)
+        self.assertIn('Ali aka', content)

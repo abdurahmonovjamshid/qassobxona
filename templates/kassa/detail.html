@@ -79,10 +79,10 @@
                 <tr>
                     <td>{{ t.date|date:"d.m.Y" }}</td>
                     <td>{{ t.register.name }}</td>
-                    <td>{{ t.get_transaction_type_display }}</td>
+                    <td>{{ t.get_transaction_type_display }}{% if t.party %}<div class="small text-muted">{{ t.party }}</div>{% endif %}</td>
                     <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|uzsum }}</td>
                     <td class="small text-muted">{{ t.reference }}</td>
-                    <td class="small text-muted">{{ t.notes }}</td>
+                    <td class="small">{{ t.doc_notes }}</td>
                 </tr>
             {% empty %}
                 <tr><td colspan="6" class="text-center text-muted py-4">Harakat yo'q.</td></tr>

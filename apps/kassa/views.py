@@ -26,7 +26,7 @@ def kassa_detail(request):
         'balances': cash_service.get_balances(),
         'registers': CashRegister.objects.all(),
         'register': register,
-        'transactions': transactions[:200],
+        'transactions': cash_service.attach_document_info(transactions[:200]),
         'date_from': date_from,
         'date_to': date_to,
         'balance_form': CashBalanceAdjustmentForm(initial={'date': timezone.localdate()}),

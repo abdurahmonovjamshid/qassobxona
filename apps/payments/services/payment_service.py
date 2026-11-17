@@ -32,6 +32,12 @@ def _register(payment: Payment):
     return None
 
 
+def _notes(payment: Payment) -> str:
+    """Kassa yozuviga to'lov izohi ham yoziladi — to'lov keyin o'chirilsa
+    ham kassa tarixida izoh saqlanib qoladi."""
+    return (payment.notes or '')[:255]
+
+
 def apply_cash_effect(payment: Payment, *, user=None) -> None:
     register = _register(payment)
     if register is None:
@@ -40,11 +46,13 @@ def apply_cash_effect(payment: Payment, *, user=None) -> None:
         cash_service.record_cash_in(
             amount=payment.amount, transaction_type=_cash_transaction_type(payment),
             date=payment.date, reference=_reference(payment), created_by=user, register=register,
+            notes=_notes(payment),
         )
     else:
         cash_service.record_cash_out(
             amount=payment.amount, transaction_type=_cash_transaction_type(payment),
             date=payment.date, reference=_reference(payment), created_by=user, register=register,
+            notes=_notes(payment),
         )
 
 
@@ -58,13 +66,13 @@ def _reverse_cash_effect(payment: Payment, *, user=None) -> None:
         # yangi xarajat emas).
         cash_service.record_cash_out(
             amount=payment.amount, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
-            date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user,
+            date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user, notes=_notes(payment),
             enforce_balance=False, register=register,
         )
     else:
         cash_service.record_cash_in(
             amount=payment.amount, transaction_type=CashTransaction.TransactionType.ADJUSTMENT,
-            date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user,
+            date=payment.date, reference=f'REVERSE:{_reference(payment)}', created_by=user, notes=_notes(payment),
             register=register,
         )
 
