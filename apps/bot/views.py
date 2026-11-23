@@ -6,6 +6,7 @@ from django.conf import settings
 from django.http import Http404, HttpResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
 
+from apps.audit.context import audit_actor
 from apps.bot.auth import get_or_create_tguser, is_admin
 from apps.bot.bot_instance import bot
 
@@ -28,9 +29,10 @@ def telegram_webhook(request, token):
             from_user = update.callback_query.from_user
 
         if from_user is not None:
-            get_or_create_tguser(from_user)
+            tg_user = get_or_create_tguser(from_user)
             if is_admin(from_user.id):
-                bot.process_new_updates([update])
+                with audit_actor(tg_user.django_user, 'bot'):
+                    bot.process_new_updates([update])
     except Exception:
         logger.exception('Telegram webhook update ni qayta ishlashda xatolik')
         traceback.print_exc()

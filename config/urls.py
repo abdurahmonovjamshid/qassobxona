@@ -31,6 +31,7 @@ urlpatterns = [
     path('kassa/', include('apps.kassa.urls')),
     path('reports/', include('apps.reports.urls')),
     path('bot/', include('apps.bot.urls')),
+    path('audit/', include('apps.audit.urls')),
 ]
 
 if settings.DEBUG:
