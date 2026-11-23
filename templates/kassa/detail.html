@@ -68,24 +68,26 @@
     <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>
     <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
     <div class="col-12 col-md-auto"><a href="?all=1" class="btn btn-outline-secondary">Barchasi</a></div>
+    <div class="col-12 col-md-auto"><a href="{% url 'kassa:export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success">Excelga yuklab olish</a></div>
 </form>
 
 <div class="card table-card">
     <div class="table-responsive">
         <table class="table mb-0 align-middle">
-            <thead><tr><th>Sana</th><th>Kassa</th><th>Turi</th><th class="text-end">Summa</th><th>Havola</th><th>Izoh</th></tr></thead>
+            <thead><tr><th>Sana</th><th>Kassa</th><th>Turi</th><th>Mijoz / Yetkazib beruvchi</th><th class="text-end">Summa</th><th>Havola</th><th>Izoh</th></tr></thead>
             <tbody>
             {% for t in transactions %}
                 <tr>
                     <td>{{ t.date|date:"d.m.Y" }}</td>
                     <td>{{ t.register.name }}</td>
                     <td>{{ t.get_transaction_type_display }}{% if t.party %}<div class="small text-muted">{{ t.party }}</div>{% endif %}</td>
+                    <td>{% if t.counterparty %}<a href="{{ t.counterparty_url }}" class="fw-semibold text-decoration-none">{{ t.counterparty }}</a><div class="small text-muted">{{ t.counterparty_kind }}</div>{% endif %}</td>
                     <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|uzsum }}</td>
                     <td class="small text-muted">{{ t.reference }}</td>
                     <td class="small">{{ t.doc_notes }}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="6" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
             {% endfor %}
             </tbody>
         </table>

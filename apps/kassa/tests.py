@@ -122,3 +122,48 @@ class KassaNotesTests(TestCase):
         self.assertEqual(content.count('Avans uchun'), 2)  # to'lov va uning bekor qilinishi
         self.assertIn('Noyabr svet puli', content)
         self.assertIn('Ali aka', content)
+
+
+class KassaCounterpartyAndExportTests(TestCase):
+    def setUp(self):
+        from apps.customers.models import Customer
+        from apps.expenses.models import ExpenseCategory
+        from apps.expenses.services import create_expense
+        from apps.payments.services import payment_service
+        from apps.suppliers.models import Supplier
+        self.client.force_login(get_user_model().objects.create_user(username='k', password='pass12345'))
+        today = timezone.localdate()
+        payment_service.create_payment(amount=Decimal('900'), date=today, customer=Customer.objects.create(name='Ali aka'))
+        payment_service.create_payment(amount=Decimal('200'), date=today, supplier=Supplier.objects.create(name='Chori bula'))
+        create_expense(category=ExpenseCategory.objects.create(name='Svet'), amount=Decimal('100'),
+                       date=today, description='Noyabr svet puli')
+
+    def test_kassa_page_shows_customer_and_supplier_column(self):
+        content = self.client.get(reverse('kassa:detail')).content.decode()
+        self.assertIn('Mijoz / Yetkazib beruvchi', content)
+        self.assertIn('Ali aka', content)
+        self.assertIn('Chori bula', content)
+        self.assertIn('Yetkazib beruvchi</div>', content)
+
+    def _sheet(self, response):
+        from io import BytesIO
+        from openpyxl import load_workbook
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('.xlsx', response['Content-Disposition'])
+        return [list(r) for r in load_workbook(BytesIO(response.content)).active.iter_rows(values_only=True)]
+
+    def test_kassa_export(self):
+        rows = self._sheet(self.client.get(reverse('kassa:export')))
+        self.assertEqual(rows[0][3], 'Mijoz / Yetkazib beruvchi')
+        by_party = {r[3]: r for r in rows[1:] if r[3]}
+        self.assertEqual(by_party['Ali aka'][4], 'Mijoz')
+        self.assertEqual(by_party['Ali aka'][6], 900)
+        self.assertEqual(by_party['Chori bula'][7], 200)
+        expense = next(r for r in rows[1:] if r[5] == 'Svet')
+        self.assertEqual(expense[9], 'Noyabr svet puli')
+
+    def test_expense_export(self):
+        rows = self._sheet(self.client.get(reverse('expenses:export')))
+        self.assertEqual(rows[0], ['Sana', 'Kategoriya', 'Kassa', 'Izoh', 'Summa'])
+        self.assertEqual(rows[1][1:], ['Svet', 'Naqd kassa', 'Noyabr svet puli', 100])
+        self.assertEqual(rows[-1][3:], ['Jami', 100])

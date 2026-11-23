@@ -81,7 +81,9 @@ def record_cash_out(*, amount, transaction_type, date, reference='', notes='', c
 
 def attach_document_info(transactions) -> list:
     """Kassa yozuvlariga havola qilingan hujjatning izohi (`doc_notes`) va
-    kontragentini (`party`) qo'shadi. Kassa yozuvining o'z `notes`i faqat
+    tafsilotini (`party`: xarajat turi yoki bo'laklash) hamda to'lovlar uchun
+    mijoz / yetkazib beruvchini (`counterparty`, `counterparty_kind`,
+    `counterparty_url`) qo'shadi. Kassa yozuvining o'z `notes`i faqat
     qo'lda kiritilgan yozuvlarda bo'ladi, to'lov/xarajat/bo'laklash izohi esa
     hujjatning o'zida saqlanadi — shu yerda `reference` bo'yicha topiladi
     (bekor qilish yozuvlari `REVERSE:` prefiksi bilan ham ishlaydi)."""
@@ -107,13 +109,21 @@ def attach_document_info(transactions) -> list:
     expenses = Expense.objects.select_related('category').in_bulk(ids['EXPENSE'])
     butcherings = Butchering.objects.select_related('input_product').in_bulk(ids['BUTCHERING'])
 
+    from django.urls import reverse
+
     for t in transactions:
         kind, pk = parse(t.reference)
         notes, party = '', ''
+        t.counterparty, t.counterparty_kind, t.counterparty_url = '', '', ''
         if kind == 'PAYMENT' and pk in payments:
             payment = payments[pk]
             notes = payment.notes
-            party = (payment.customer or payment.supplier).name if (payment.customer or payment.supplier) else ''
+            if payment.customer_id:
+                t.counterparty, t.counterparty_kind = payment.customer.name, 'Mijoz'
+                t.counterparty_url = reverse('customers:detail', args=[payment.customer_id])
+            elif payment.supplier_id:
+                t.counterparty, t.counterparty_kind = payment.supplier.name, 'Yetkazib beruvchi'
+                t.counterparty_url = reverse('suppliers:detail', args=[payment.supplier_id])
         elif kind == 'EXPENSE' and pk in expenses:
             notes = expenses[pk].description
             party = expenses[pk].category.name

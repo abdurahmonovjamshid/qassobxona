@@ -27,6 +27,7 @@
     </div>
     <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
     <div class="col-12 col-md-auto"><a href="?all=1" class="btn btn-outline-secondary">Barchasi</a></div>
+    <div class="col-12 col-md-auto"><a href="{% url 'expenses:export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success">Excelga yuklab olish</a></div>
 </form>
 
 <div class="card table-card">
