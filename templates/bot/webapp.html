@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="uz">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{{ app_name }}</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        html, body { height: 100%; margin: 0; }
+        body {
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #1f2937);
+            padding: 24px; box-sizing: border-box;
+        }
+        .box { max-width: 320px; }
+        .title { font-size: 20px; font-weight: 700; margin: 16px 0 6px; }
+        .hint { font-size: 14px; color: var(--tg-theme-hint-color, #6b7280); line-height: 1.45; }
+        .spinner {
+            width: 36px; height: 36px; margin: 0 auto; border-radius: 50%;
+            border: 3px solid var(--tg-theme-secondary-bg-color, #e5e7eb);
+            border-top-color: var(--tg-theme-button-color, #0d9488);
+            animation: spin .8s linear infinite;
+        }
+        .error .spinner { display: none; }
+        .error .hint { color: #dc2626; }
+        button {
+            margin-top: 18px; padding: 10px 18px; border: 0; border-radius: 10px; font-size: 15px;
+            background: var(--tg-theme-button-color, #0d9488); color: var(--tg-theme-button-text-color, #fff);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="box" id="box">
+    <div class="spinner"></div>
+    <div class="title">{{ app_name }}</div>
+    <div class="hint" id="hint">Kirilmoqda…</div>
+    <button id="retry" hidden>Qayta urinish</button>
+</div>
+<form id="authForm" hidden>{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"></form>
+<script>
+(function () {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var box = document.getElementById('box');
+    var hint = document.getElementById('hint');
+    var retry = document.getElementById('retry');
+
+    function fail(text, canRetry) {
+        box.classList.add('error');
+        hint.textContent = text;
+        retry.hidden = !canRetry;
+    }
+
+    function enter() {
+        box.classList.remove('error');
+        hint.textContent = 'Kirilmoqda…';
+        retry.hidden = true;
+        var body = new FormData(document.getElementById('authForm'));
+        body.append('init_data', tg.initData);
+        fetch('{% url "bot:webapp_auth" %}', { method: 'POST', body: body, credentials: 'same-origin' })
+            .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+            .then(function (res) {
+                if (res.ok && res.data.next) { window.location.replace(res.data.next); }
+                else { fail(res.data.error || 'Kirib bo\'lmadi.', false); }
+            })
+            .catch(function () { fail('Internet aloqasini tekshirib, qayta urinib ko\'ring.', true); });
+    }
+
+    retry.addEventListener('click', enter);
+    if (!tg || !tg.initData) {
+        fail('Bu sahifa faqat Telegram bot ichida ochiladi.', false);
+        return;
+    }
+    tg.ready();
+    tg.expand();
+    enter();
+})();
+</script>
+</body>
+</html>

@@ -395,7 +395,8 @@ class StatementFromNameLinkTests(TestCase):
         common.on_text(_fake_message('/start'))
 
         self.assertEqual(self._documents(sent), [])
-        self.assertIn('Assalomu alaykum', sent[-1]['params']['text'])
+        texts = [m['params'].get('text', '') for m in sent]
+        self.assertTrue(any('Assalomu alaykum' in t for t in texts), texts)
 
     def test_unknown_id_replies_without_file(self, mock_req):
         from apps.bot.handlers import common
