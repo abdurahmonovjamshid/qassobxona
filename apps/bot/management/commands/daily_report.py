@@ -58,6 +58,21 @@ def build_report(today=None):
     return '\n'.join(lines)
 
 
+def send_to_admins(text, log=None) -> int:
+    """Har bir adminga yuboradi; nechta adminga yetib borganini qaytaradi."""
+    sent = 0
+    for admin_id in settings.TELEGRAM_ADMIN_IDS:
+        try:
+            send_with_retry(admin_id, text, attempts=3, delay=2)
+            sent += 1
+            if log:
+                log(f'Yuborildi: {admin_id}')
+        except Exception as exc:
+            if log:
+                log(f"Yuborib bo'lmadi ({admin_id}): {exc}")
+    return sent
+
+
 def send_with_retry(chat_id, text, attempts=4, delay=5):
     from apps.bot.bot_instance import bot
 
@@ -78,8 +93,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Yubormasdan ekranga chiqarish')
+        parser.add_argument('--url', action='store_true', help='cron-job.org uchun maxfiy havolani chiqarish')
 
-    def handle(self, *args, dry_run=False, **options):
+    def handle(self, *args, dry_run=False, url=False, **options):
+        if url:
+            from apps.bot.daily import daily_url
+            self.stdout.write(daily_url() or 'TELEGRAM_BOT_TOKEN yoki HOST sozlanmagan.')
+            return
         text = build_report()
         if dry_run:
             self.stdout.write(text)
@@ -87,9 +107,4 @@ class Command(BaseCommand):
         if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_ADMIN_IDS:
             self.stderr.write('TELEGRAM_BOT_TOKEN yoki ADMINS sozlanmagan.')
             return
-        for admin_id in settings.TELEGRAM_ADMIN_IDS:
-            try:
-                send_with_retry(admin_id, text)
-                self.stdout.write(f'Yuborildi: {admin_id}')
-            except Exception as exc:
-                self.stderr.write(f'Yuborib bo\'lmadi ({admin_id}): {exc}')
+        send_to_admins(text, log=self.stdout.write)

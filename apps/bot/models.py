@@ -39,3 +39,17 @@ class TgUser(models.Model):
         self.state = ''
         self.data = {}
         self.save(update_fields=['state', 'data', 'updated_at'])
+
+
+class DailyReportRun(models.Model):
+    """Kunlik hisobot shu kuni yuborilganini belgilaydi (takror yubormaslik uchun)."""
+    date = models.DateField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = 'Kunlik hisobot'
+        verbose_name_plural = 'Kunlik hisobotlar'
+
+    def __str__(self):
+        return self.date.strftime('%d.%m.%Y')
