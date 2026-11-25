@@ -217,3 +217,38 @@ class InventoryExcelRoundTripTests(TestCase):
         self.assertEqual(InventoryCount.objects.count(), 0)
         messages = list(response.context['messages'])
         self.assertTrue(any('sarlavhasi' in str(m) for m in messages))
+
+
+class NegativeStockExcelRecountTests(TestCase):
+    """Manfiy qoldiq Excel import (tannarx bilan) orqali 0 ga to'g'rilanadi."""
+
+    def setUp(self):
+        category = ProductCategory.objects.create(name='Umumiy', code='gen')
+        self.product = Product.objects.create(name='Suyak', code='SY', category=category)
+        self.today = timezone.localdate()
+        from apps.inventory.models import StockMovement
+        StockMovement.objects.create(
+            product=self.product, warehouse=inventory_service.resolve_warehouse(None),
+            quantity=Decimal('12.5'), pieces=2, movement_type=StockMovement.MovementType.SALE,
+            direction=StockMovement.Direction.OUT, unit_cost=Decimal('0'), date=self.today)
+
+    def test_negative_stock_set_to_zero(self):
+        self.assertEqual(inventory_service.get_stock(self.product), Decimal('-12.5'))
+        count = InventoryCount.objects.create(date=self.today, warehouse=inventory_service.resolve_warehouse(None))
+        InventoryCountItem.objects.create(count=count, product=self.product, counted_kg=Decimal('0'),
+                                          counted_pieces=0, unit_cost=Decimal('108000'))
+        inventory_service.confirm_inventory_count(count)
+        self.assertEqual(inventory_service.get_stock(self.product), Decimal('0'))
+        self.assertEqual(inventory_service.get_stock_pieces(self.product), 0)
+
+        diff = inventory_service.inventory_difference(self.today, self.today)
+        self.assertEqual(diff['surplus_kg'], Decimal('12.5'))
+        self.assertEqual(diff['surplus_value'], Decimal('1350000'))
+
+    def test_negative_stock_set_to_counted(self):
+        count = InventoryCount.objects.create(date=self.today, warehouse=inventory_service.resolve_warehouse(None))
+        InventoryCountItem.objects.create(count=count, product=self.product, counted_kg=Decimal('7'),
+                                          counted_pieces=1, unit_cost=Decimal('50000'))
+        inventory_service.confirm_inventory_count(count)
+        self.assertEqual(inventory_service.get_stock(self.product), Decimal('7'))
+        self.assertEqual(inventory_service.get_stock_pieces(self.product), 1)

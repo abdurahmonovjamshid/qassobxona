@@ -209,6 +209,39 @@ def confirm_inventory_count(count: InventoryCount, *, user=None) -> InventoryCou
     return count
 
 
+def inventory_difference(date_from, date_to) -> dict:
+    """Tasdiqlangan inventarizatsiyalardagi farq (hisoblangan − tizim qoldig'i)
+    shu davr uchun: kamomad va ortiqcha kg hamda so'mdagi qiymati. Qiymat
+    item tannarxi (Excel importda kiritilgan) yoki mahsulotning joriy o'rtacha
+    tannarxi bilan hisoblanadi."""
+    from apps.inventory.models import InventoryCountItem
+
+    items = InventoryCountItem.objects.filter(
+        count__status=InventoryCount.Status.CONFIRMED,
+        count__date__gte=date_from, count__date__lte=date_to,
+    ).exclude(diff_kg=0).select_related('product')
+    costs = {}
+    shortage_kg = surplus_kg = shortage_value = surplus_value = Decimal('0')
+    for item in items:
+        cost = item.unit_cost
+        if cost is None:
+            if item.product_id not in costs:
+                costs[item.product_id] = get_weighted_average_cost(item.product)
+            cost = costs[item.product_id]
+        value = item.diff_kg * cost
+        if item.diff_kg < 0:
+            shortage_kg += -item.diff_kg
+            shortage_value += -value
+        else:
+            surplus_kg += item.diff_kg
+            surplus_value += value
+    return {
+        'shortage_kg': shortage_kg, 'shortage_value': shortage_value,
+        'surplus_kg': surplus_kg, 'surplus_value': surplus_value,
+        'net_value': surplus_value - shortage_value,
+    }
+
+
 def _apply_diff_only(item, reference, date, user, warehouse):
     """Eskicha rejim: faqat kg/dona farqi ADJUSTMENT bilan to'g'irlanadi,
     tannarxga tegilmaydi (qo'lda to'ldiriladigan Inventarizatsiya formasi)."""
@@ -237,15 +270,22 @@ def _apply_recount_with_cost(item, system_kg, system_pieces, reference, date, us
     qayta kirim qilinadi. Bu shunchaki farqni emas, to'liq miqdorni
     ko'chirgani uchun `get_weighted_average_cost` yangi qiymatga yaqinroq
     (kichik/o'rtacha aylanma mahsulotlarda deyarli aniq) siljiydi."""
-    if system_kg > 0 or system_pieces > 0:
+    # Qoldiq manfiy bo'lishi mumkin (ALLOW_NEGATIVE_STOCK): musbat qismi chiqim
+    # qilinadi, manfiy qismi esa kirimga qo'shiladi — natijada qoldiq aynan
+    # hisoblangan miqdorga (masalan 0 ga) teng bo'ladi.
+    out_kg = max(system_kg, Decimal('0'))
+    out_pieces = max(system_pieces, 0)
+    in_kg = item.counted_kg + max(-system_kg, Decimal('0'))
+    in_pieces = item.counted_pieces + max(-system_pieces, 0)
+    if out_kg > 0 or out_pieces > 0:
         stock_out(
-            product=item.product, quantity=system_kg, pieces=system_pieces,
+            product=item.product, quantity=out_kg, pieces=out_pieces,
             movement_type=StockMovement.MovementType.ADJUSTMENT,
             reference=reference, date=date, created_by=user, warehouse=warehouse,
         )
-    if item.counted_kg > 0 or item.counted_pieces > 0:
+    if in_kg > 0 or in_pieces > 0:
         stock_in(
-            product=item.product, quantity=item.counted_kg, pieces=item.counted_pieces,
+            product=item.product, quantity=in_kg, pieces=in_pieces,
             movement_type=StockMovement.MovementType.ADJUSTMENT,
             unit_cost=item.unit_cost, reference=reference, date=date, created_by=user, warehouse=warehouse,
         )

@@ -84,6 +84,18 @@
             </div>
         </div>
     </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'inventory:count_list' %}" class="card stat-card h-100 text-decoration-none">
+            <div class="card-body">
+                <div class="stat-label">Inventarizatsiya farqi (shu oy)</div>
+                <div class="stat-value {% if inventory_diff.net_value < 0 %}text-danger{% elif inventory_diff.net_value > 0 %}text-success{% endif %}">{{ inventory_diff.net_value|uzsum }} so'm</div>
+                <div class="small text-muted">
+                    Kamomad: <span class="text-danger">{{ inventory_diff.shortage_kg|uzqty }} kg · {{ inventory_diff.shortage_value|uzsum }}</span><br>
+                    Ortiqcha: <span class="text-success">{{ inventory_diff.surplus_kg|uzqty }} kg · {{ inventory_diff.surplus_value|uzsum }}</span>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">
