@@ -252,3 +252,12 @@ class NegativeStockExcelRecountTests(TestCase):
         inventory_service.confirm_inventory_count(count)
         self.assertEqual(inventory_service.get_stock(self.product), Decimal('7'))
         self.assertEqual(inventory_service.get_stock_pieces(self.product), 1)
+
+    def test_count_without_movements_not_in_difference(self):
+        count = InventoryCount.objects.create(date=self.today, warehouse=inventory_service.resolve_warehouse(None),
+                                              status=InventoryCount.Status.CONFIRMED)
+        InventoryCountItem.objects.create(count=count, product=self.product, counted_kg=Decimal('0'),
+                                          counted_pieces=0, diff_kg=Decimal('12.5'), unit_cost=Decimal('108000'))
+        diff = inventory_service.inventory_difference(self.today, self.today)
+        self.assertEqual(diff['surplus_kg'], Decimal('0'))
+        self.assertEqual(diff['net_value'], Decimal('0'))

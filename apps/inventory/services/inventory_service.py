@@ -213,27 +213,43 @@ def inventory_difference(date_from, date_to) -> dict:
     """Tasdiqlangan inventarizatsiyalardagi farq (hisoblangan − tizim qoldig'i)
     shu davr uchun: kamomad va ortiqcha kg hamda so'mdagi qiymati. Qiymat
     item tannarxi (Excel importda kiritilgan) yoki mahsulotning joriy o'rtacha
-    tannarxi bilan hisoblanadi."""
+    tannarxi bilan hisoblanadi.
+
+    Farq kg'da item'dagi `diff_kg`dan emas, haqiqatda yaratilgan ombor
+    harakatlaridan (kirim − chiqim) olinadi — shunda qoldiqni o'zgartirmagan
+    yozuvlar (masalan tuzatishdan oldingi manfiy qoldiqli importlar) hisobga
+    kirmaydi."""
     from apps.inventory.models import InventoryCountItem
 
-    items = InventoryCountItem.objects.filter(
-        count__status=InventoryCount.Status.CONFIRMED,
-        count__date__gte=date_from, count__date__lte=date_to,
-    ).exclude(diff_kg=0).select_related('product')
+    counts = InventoryCount.objects.filter(
+        status=InventoryCount.Status.CONFIRMED, date__gte=date_from, date__lte=date_to,
+    )
+    net = {}
+    rows = (StockMovement.objects.filter(reference__in=[_reference(c) for c in counts])
+            .values('reference', 'product_id', 'direction').annotate(s=Sum('quantity')))
+    for row in rows:
+        sign = 1 if row['direction'] == StockMovement.Direction.IN else -1
+        key = (int(row['reference'].split(':')[1]), row['product_id'])
+        net[key] = net.get(key, Decimal('0')) + sign * (row['s'] or Decimal('0'))
+
+    items = InventoryCountItem.objects.filter(count__in=counts).select_related('product')
     costs = {}
     shortage_kg = surplus_kg = shortage_value = surplus_value = Decimal('0')
     for item in items:
+        diff = net.get((item.count_id, item.product_id), Decimal('0'))
+        if not diff:
+            continue
         cost = item.unit_cost
         if cost is None:
             if item.product_id not in costs:
                 costs[item.product_id] = get_weighted_average_cost(item.product)
             cost = costs[item.product_id]
-        value = item.diff_kg * cost
-        if item.diff_kg < 0:
-            shortage_kg += -item.diff_kg
+        value = diff * cost
+        if diff < 0:
+            shortage_kg += -diff
             shortage_value += -value
         else:
-            surplus_kg += item.diff_kg
+            surplus_kg += diff
             surplus_value += value
     return {
         'shortage_kg': shortage_kg, 'shortage_value': shortage_value,
