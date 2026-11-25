@@ -110,7 +110,6 @@ def index(request):
     top_suppliers_values = [float(row['total']) for row in top_suppliers_qs]
 
     kassa_balances = cash_service.get_balances()
-    inventory_diff = inventory_service.inventory_difference(today.replace(day=1), today)
 
     context = {
         'today': today,
@@ -121,6 +120,7 @@ def index(request):
         'today_net_profit': today_net_profit,
         'debitor_total': debitor_total,
         'creditor_total': creditor_total,
+        'debt_balance': debitor_total - creditor_total,
         'naqd_qoldiq': naqd_qoldiq,
         'customer_payments_today': customer_payments_today,
         'supplier_payments_today': supplier_payments_today,
@@ -132,7 +132,6 @@ def index(request):
         'top_products_values': json.dumps(top_products_values),
         'debitor_creditor_values': json.dumps([float(debitor_total), float(creditor_total)]),
         'kassa_balances': kassa_balances,
-        'inventory_diff': inventory_diff,
         'top_customers_labels': json.dumps(top_customers_labels),
         'top_customers_values': json.dumps(top_customers_values),
         'top_suppliers_labels': json.dumps(top_suppliers_labels),
